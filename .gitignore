@@ -371,4 +371,10 @@ TSWLatexianTemp*
 # Flex
 *.yy.c
 
+# Bison
+*.tab.*
+
+# Executable
+novalang
+
 # End of https://www.toptal.com/developers/gitignore/api/c,latex

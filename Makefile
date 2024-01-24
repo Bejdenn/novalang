@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-O2 -Wall --debug
 
-OBJ=novalang.tab.o lex.yy.o
+OBJ=novalang.tab.o lex.yy.o symbol.o ast.o
 
 novalang: $(OBJ)
 	$(CC) -o $@ $(OBJ) -ll
