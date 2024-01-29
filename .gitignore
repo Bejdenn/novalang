@@ -368,13 +368,19 @@ TSWLatexianTemp*
 
 .DS_Store
 
+# End of https://www.toptal.com/developers/gitignore/api/c,latex
+
 # Flex
 *.yy.c
 
 # Bison
 *.tab.*
+*.dot
+*.output
+novalang.svg
 
 # Executable
 novalang
 
-# End of https://www.toptal.com/developers/gitignore/api/c,latex
+# TODO Remove this ignore of source files when there are proper examples
+*.nl

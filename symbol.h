@@ -5,6 +5,6 @@ struct symbol
 };
 
 #define TBL_SIZE 25
-struct symbol symtab[TBL_SIZE];
+extern struct symbol symtab[TBL_SIZE];
 
 struct symbol *symlookup(char *);

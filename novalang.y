@@ -2,6 +2,7 @@
     #include <stdio.h>
     #include "ast.h"
     #include "symbol.h"
+    extern struct symbol symtab[];
     int yylex(void);
     void yyerror (char *msg) {
         fprintf(stderr, "%s\n", msg);
@@ -15,28 +16,29 @@
     struct ast *a;
 }
 
-%token <s> ID
-%token <num> NUM
-%token DAA 
-%token EOL
+%token <s> ID <num> NUM
 
-%type <a> exp, stmt, shortAssign
+%type <a> Expression Statements Statement VarShortAssign
 
-%start start
+%start Start
 
-%left '+' '-'
+%left '+'
 
 %%
 
-start: /* nothing */
-    | stmt EOL { printf("%d\n", ast_eval($1)); }
+Start: Statements { printf("Out: %d\n", ast_eval($1)); }
 
-stmt: shortAssign
+Statements: Statements Statement ';' { $$ = ast_newnode('S', $1, $2); }
+    | Statement ';'
 
-shortAssign: ID DAA exp { $$ = ast_newnode_assign($1, $3) }
+Statement: VarShortAssign
 
-exp: exp '+' exp { $$ = ast_newnode('+', $1, $3); }
+VarShortAssign: ID ':' '=' Expression { $$ = ast_newnode_assign($1, $4); }
+
+Expression: Expression '+' Expression { $$ = ast_newnode('+', $1, $3); }
     | NUM { $$ = ast_newnode_num($1); }
+    | ID { $$ = ast_newnode_ref($1); }
+
 %%
 
 int main(void) {

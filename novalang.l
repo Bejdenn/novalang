@@ -20,34 +20,31 @@ void striplz(char *str) {
 
 %x BLOCK_COMMENT
 
-STRING     \"[^\"]*\"
 INT        0*([1-9][0-9]*|0)
-FLOAT      ({INT}*\.[0-9]+|{INT}+\.)
-FUNCTION   "fn"
-BOOL       "bool"
-TRUE       "true"
-FALSE      "false"
-MOD        "mod"
-DECLARE    ":"
-ASSIGN     "="
-INIT       ":="
 IDENTIFIER [a-zA-Z0-9_]+
 
 %%
-"+" { return yytext[0]; }
-":=" { return DAA; }
-{INT} { 
+"+" |
+";" |
+":" |
+"=" { return yytext[0]; }
+
+{INT} {
     striplz(yytext);
     yylval.num = strtol(yytext, NULL, 10);
     return NUM; 
 }
+
 {IDENTIFIER} { 
     yylval.s = symlookup(yytext);
     return ID; 
 }
-\n { return EOL; }
+
 "/*" { BEGIN(BLOCK_COMMENT); }
+
 <BLOCK_COMMENT>"*/" { BEGIN(INITIAL); }
+
 "//".*
-.
+
+[ |\t|\n|.] { }
 %%

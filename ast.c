@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern struct symbol symtab[];
+
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r)
 {
     struct ast *a = malloc(sizeof(struct ast));
@@ -42,6 +44,9 @@ int ast_eval(struct ast *a)
 {
     switch (a->nodetype)
     {
+    case 'S':
+        ast_eval(a->r);
+        return ast_eval(a->l);
     case '=':
         return ((struct symassign *)a)->s->val = ast_eval(((struct symassign *)a)->v);
     case 'N':
