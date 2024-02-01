@@ -381,6 +381,3 @@ novalang.svg
 
 # Executable
 novalang
-
-# TODO Remove this ignore of source files when there are proper examples
-*.nl

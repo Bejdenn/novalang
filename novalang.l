@@ -1,9 +1,10 @@
+%option yylineno
+
 %{
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include "novalang.tab.h"
-#include "symbol.h"
 #include "ast.h"
 
 /*
@@ -21,13 +22,40 @@ void striplz(char *str) {
 %x BLOCK_COMMENT
 
 INT        0*([1-9][0-9]*|0)
+STRING     \"[^\"]*\"
+BOOL       (true|false)
 IDENTIFIER [a-zA-Z0-9_]+
 
 %%
 "+" |
+"-" |
+"*" |
+"/" |
 ";" |
 ":" |
+"(" |
+")" |
+"{" |
+"}" |
 "=" { return yytext[0]; }
+
+"mod" { return MOD; }
+
+"==" { yylval.num = EQ;         return CMP; }
+"!=" { yylval.num = N_EQ;       return CMP; }
+"<"  { yylval.num = LESS;       return CMP; }
+"<=" { yylval.num = LESS_OR_EQ; return CMP; }
+">"  { yylval.num = GRT;        return CMP; }
+">=" { yylval.num = GRT_OR_EQ;  return CMP; }
+
+"int"  { yylval.num = T_INT;   return TYPE; }
+"flt"  { yylval.num = T_FLT;   return TYPE; }
+"bool" { yylval.num = T_BOOL;  return TYPE; }
+"str"  { yylval.num = T_STR;   return TYPE; }
+
+"if"   { return IF; }
+"else" { return ELSE; }
+"for"  { return FOR; }
 
 {INT} {
     striplz(yytext);
@@ -35,14 +63,27 @@ IDENTIFIER [a-zA-Z0-9_]+
     return NUM; 
 }
 
+{STRING} { 
+    yylval.str = strdup(yytext+1);
+    yylval.str[strlen(yylval.str)-1] = 0;
+    return STRING;
+}
+
+{BOOL} {
+    yylval.boolean = strcmp(yytext, "true") == 0;
+    return BOOL;
+}
+
+"print" { yylval.num = PRINT; return BUILTIN_FN; }
+
 {IDENTIFIER} { 
-    yylval.s = symlookup(yytext);
+    yylval.str = strdup(yytext);
     return ID; 
 }
 
 "/*" { BEGIN(BLOCK_COMMENT); }
-
 <BLOCK_COMMENT>"*/" { BEGIN(INITIAL); }
+<BLOCK_COMMENT>[.|\n|\t| ]* { }
 
 "//".*
 

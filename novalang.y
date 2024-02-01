@@ -1,43 +1,100 @@
 %{
     #include <stdio.h>
+    #include <stdarg.h>
+    #include <stdlib.h>
     #include "ast.h"
-    #include "symbol.h"
-    extern struct symbol symtab[];
+
     int yylex(void);
-    void yyerror (char *msg) {
-        fprintf(stderr, "%s\n", msg);
-    } 
+    extern int yylineno;
+
+    void yyerror(char *s, ...)
+    {
+        va_list ap;
+        va_start(ap, s);
+        fprintf(stderr, "%d: error: ", yylineno);
+        vfprintf(stderr, s, ap);
+        fprintf(stderr, "\n");
+    }
 %}
 
 %union {
     char *str;
     int num;
+    int boolean;
     struct symbol *s;
     struct ast *a;
 }
 
-%token <s> ID <num> NUM
+%token <str> ID STRING
+%token <num> NUM BUILTIN_FN TYPE
+%token <boolean> BOOL
+%token IF ELSE FOR
 
-%type <a> Expression Statements Statement VarShortAssign
+%type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration VarAssignment BuiltInFunction IfExpression IfStatement ForStatement
+%type <s> DefinedId
 
 %start Start
 
-%left '+'
+%nonassoc <num> CMP
+%left '+' '-'
+%left '*' '/' MOD
 
 %%
 
-Start: Statements { printf("Out: %d\n", ast_eval($1)); }
+Start: %empty
+    | Statements { ast_eval($1); printf("Parser: ok\n"); }
 
-Statements: Statements Statement ';' { $$ = ast_newnode('S', $1, $2); }
-    | Statement ';'
+Statements: Statements Statement { $$ = ast_newnode(STATEMENT, $1, $2); }
+    | Statement
 
-Statement: VarShortAssign
+Statement: IfStatement
+    | ForStatement
+    | ShortVarDeclaration ';'
+    | VarDeclaration ';'
+    | VarAssignment ';'
+    | BuiltInFunction ';'
 
-VarShortAssign: ID ':' '=' Expression { $$ = ast_newnode_assign($1, $4); }
+IfStatement: IF Expression '{' '}' { }
+    | IF Expression '{' Statements '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, NULL); }
+    | IF Expression '{' Statements '}' ELSE '{' Statements '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, $8); }
+    | IF Expression '{' Statements '}' ELSE '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, NULL); }
+    | IF Expression '{' '}' ELSE '{' Statements '}' { /* Create AST node that negates condition */ }
 
-Expression: Expression '+' Expression { $$ = ast_newnode('+', $1, $3); }
+ForStatement: FOR Expression '{' '}' { }
+    | FOR Expression '{' Statements '}' { $$ = ast_newnode_flow(FOR_STMT, $2, $4, NULL); }
+
+BuiltInFunction: BUILTIN_FN '(' Expression ')' { $$ = ast_newnode_builtin($1, $3); }
+
+ShortVarDeclaration: ID ':' '=' Expression { $$ = ast_newnode_assign(symadd($1, T_UNKNOWN), $4); }
+
+VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl(symadd($1, $3)); }
+
+VarAssignment: DefinedId '=' Expression { $$ = ast_newnode_assign($1, $3); }
+
+Expression: '(' Expression ')' { $$ = $2; }
+    | Expression CMP Expression { $$ = ast_newnode($2, $1, $3); }
+    | Expression MOD Expression { $$ = ast_newnode('%', $1, $3); } 
+    | Expression '*' Expression { $$ = ast_newnode('*', $1, $3); }
+    | Expression '/' Expression { $$ = ast_newnode('/', $1, $3); }
+    | Expression '+' Expression { $$ = ast_newnode('+', $1, $3); }
+    | Expression '-' Expression { $$ = ast_newnode('-', $1, $3); }
+    | IfExpression { $$ = $1; }
     | NUM { $$ = ast_newnode_num($1); }
-    | ID { $$ = ast_newnode_ref($1); }
+    | STRING { $$ = ast_newnode_str($1); }
+    | BOOL { $$ = ast_newnode_bool($1); }
+    | DefinedId { $$ = ast_newnode_ref($1); }
+
+IfExpression: IF Expression '{' Expression '}' ELSE '{' Expression '}' { $$ = ast_newnode_if_expr($2, $4, $8); }
+
+DefinedId: ID {
+    struct symbol *s = symlookup($1);
+    if (!s) {
+        yyerror("identifier %s is undefined", $1);
+        abort();
+    } else {
+        $$ = s;
+    }
+}
 
 %%
 
