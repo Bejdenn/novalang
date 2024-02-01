@@ -18,11 +18,8 @@ lex.yy.c: novalang.l
 
 lex.yy.o: lex.yy.c novalang.tab.h
 
-novalang.svg: novalang.dot
-	dot -Tsvg novalang.dot -o novalang.svg
-
 test: novalang
 	sh tests.sh
 
 clean:
-	rm lex.yy.* novalang.tab.* novalang.dot novalang.output novalang.svg novalang 
+	rm lex.yy.* novalang.tab.* novalang 
