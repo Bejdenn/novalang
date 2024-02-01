@@ -13,7 +13,7 @@ boolean: bool;
 boolean = "Hallo" == "Hallo";
 
 // not equal
-boolean = 1 != "Hallo";
+boolean = "1" != "Hallo";
 
 // less than
 boolean = x < y;
