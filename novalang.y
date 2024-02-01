@@ -42,7 +42,7 @@
 %%
 
 Start: %empty
-    | Statements { ast_eval($1); printf("Parser: ok\n"); }
+    | Statements { ast_interpret($1); printf("Parser: ok\n"); }
 
 Statements: Statements Statement { $$ = ast_newnode(STATEMENT, $1, $2); }
     | Statement
@@ -72,12 +72,12 @@ VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl(symadd($1, $3)); }
 VarAssignment: DefinedId '=' Expression { $$ = ast_newnode_assign($1, $3); }
 
 Expression: '(' Expression ')' { $$ = $2; }
-    | Expression CMP Expression { $$ = ast_newnode($2, $1, $3); }
-    | Expression MOD Expression { $$ = ast_newnode('%', $1, $3); } 
-    | Expression '*' Expression { $$ = ast_newnode('*', $1, $3); }
-    | Expression '/' Expression { $$ = ast_newnode('/', $1, $3); }
-    | Expression '+' Expression { $$ = ast_newnode('+', $1, $3); }
-    | Expression '-' Expression { $$ = ast_newnode('-', $1, $3); }
+    | Expression CMP Expression { $$ = ast_newnode_op($2, $1, $3); }
+    | Expression MOD Expression { $$ = ast_newnode_op('%', $1, $3); } 
+    | Expression '*' Expression { $$ = ast_newnode_op('*', $1, $3); }
+    | Expression '/' Expression { $$ = ast_newnode_op('/', $1, $3); }
+    | Expression '+' Expression { $$ = ast_newnode_op('+', $1, $3); }
+    | Expression '-' Expression { $$ = ast_newnode_op('-', $1, $3); }
     | IfExpression { $$ = $1; }
     | NUM { $$ = ast_newnode_num($1); }
     | STRING { $$ = ast_newnode_str($1); }

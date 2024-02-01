@@ -5,13 +5,53 @@
 
 extern struct symbol symtab[];
 
+char *error_buf[100];
+int error_buf_ptr = 0;
+
+void add_syntax_err(char *err)
+{
+    error_buf[error_buf_ptr++] = strdup(err);
+}
+
 void do_arithm_op(struct value *, int, struct ast *);
 void do_cmp(struct value *, int, struct ast *);
+
+enum value_type op_get_type(int, char, struct ast *, struct ast *);
+
+char *lookup_op(int op)
+{
+    switch (op)
+    {
+    case '+':
+        return "+";
+    case '-':
+        return "-";
+    case '%':
+        return "%";
+    case '*':
+        return "*";
+    case '/':
+        return "/";
+    case EQ:
+        return "==";
+    case N_EQ:
+        return "!=";
+    case GRT:
+        return ">";
+    case LESS:
+        return "<";
+    case GRT_OR_EQ:
+        return ">=";
+    case LESS_OR_EQ:
+        return "<=";
+    default:
+        return "unknown";
+    }
+}
 
 void type_mismatch(int lineno, int expected, int was)
 {
     printf("%d: Type mismatch: expected %s, but was %s\n", lineno, lookup_value_type_name(expected), lookup_value_type_name(was));
-    exit(1);
 }
 
 char *to_string(struct value *v)
@@ -45,6 +85,86 @@ char *str_concat(char *s1, char *s2)
     return s;
 }
 
+enum value_type op_get_type(int lineno, char op, struct ast *l, struct ast *r)
+{
+    switch (op)
+    {
+    case '+':
+        switch (l->type)
+        {
+        case T_INT:
+            switch (r->type)
+            {
+            case T_INT:
+                return T_INT;
+            case T_STR:
+                return T_STR;
+            default:
+                break;
+            }
+            break;
+        case T_STR:
+            switch (r->type)
+            {
+            case T_INT:
+                return T_STR;
+            case T_STR:
+                return T_STR;
+            case T_BOOL:
+                return T_STR;
+            default:
+                break;
+            }
+            break;
+        case T_BOOL:
+            switch (r->type)
+            {
+            case T_STR:
+                return T_STR;
+            default:
+                break;
+            }
+            break;
+        default:
+            break;
+        }
+        break;
+    case '-':
+    case '%':
+    case '*':
+    case '/':
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            return T_INT;
+        }
+        break;
+    case EQ:
+    case N_EQ:
+        if (l->type == r->type)
+        {
+            return T_BOOL;
+        }
+        break;
+    case GRT:
+    case LESS:
+    case GRT_OR_EQ:
+    case LESS_OR_EQ:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            return T_BOOL;
+        }
+        break;
+    default:
+        printf("%d: Unknown operator: %c\n", lineno, op);
+        exit(1);
+    }
+
+    char s[100];
+    sprintf(s, "%d: Operator '%s' is not supported for '%s and '%s'\n", lineno, lookup_op(op), lookup_value_type_name(l->type), lookup_value_type_name(r->type));
+    add_syntax_err(s);
+    return T_UNKNOWN;
+}
+
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r)
 {
     struct ast *a = malloc(sizeof(struct ast));
@@ -56,10 +176,24 @@ struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r)
     return a;
 }
 
+struct ast *ast_newnode_op(char op, struct ast *l, struct ast *r)
+{
+    struct ast *a = malloc(sizeof(struct ast));
+
+    a->nodetype = op;
+    a->lineno = yylineno;
+    a->l = l;
+    a->r = r;
+    a->type = op_get_type(a->lineno, op, l, r);
+
+    return a;
+}
+
 struct ast *ast_newnode_num(int d)
 {
     struct numval *a = malloc(sizeof(struct numval));
     a->nodetype = T_INT;
+    a->type = T_INT;
     a->lineno = yylineno;
     a->number = d;
     return (struct ast *)a;
@@ -69,6 +203,7 @@ struct ast *ast_newnode_str(char *s)
 {
     struct strval *a = malloc(sizeof(struct strval));
     a->nodetype = T_STR;
+    a->type = T_STR;
     a->lineno = yylineno;
     a->str = s;
     return (struct ast *)a;
@@ -78,6 +213,7 @@ struct ast *ast_newnode_bool(int b)
 {
     struct boolval *a = malloc(sizeof(struct boolval));
     a->nodetype = T_BOOL;
+    a->type = T_BOOL;
     a->lineno = yylineno;
     a->boolean = b;
     return (struct ast *)a;
@@ -87,6 +223,7 @@ struct ast *ast_newnode_decl(struct symbol *s)
 {
     struct symdecl *a = malloc(sizeof(struct symdecl));
     a->nodetype = DECLARATION;
+    a->type = T_VOID;
     a->lineno = yylineno;
     a->s = s;
     return (struct ast *)a;
@@ -96,6 +233,19 @@ struct ast *ast_newnode_assign(struct symbol *s, struct ast *v)
 {
     struct symassign *a = malloc(sizeof(struct symassign));
     a->nodetype = ASSIGNMENT;
+    a->type = T_VOID;
+
+    if (s->type == T_UNKNOWN)
+    {
+        s->type = v->type;
+    }
+    else if (s->type != v->type)
+    {
+        char str[100];
+        sprintf(str, "%d: Cannot assign '%s' to '%s'\n", yylineno, lookup_value_type_name(v->type), lookup_value_type_name(s->type));
+        add_syntax_err(str);
+    }
+
     a->lineno = yylineno;
     a->s = s;
     a->v = v;
@@ -106,6 +256,7 @@ struct ast *ast_newnode_ref(struct symbol *s)
 {
     struct symref *a = malloc(sizeof(struct symref));
     a->nodetype = REFERENCE;
+    a->type = s->type;
     a->lineno = yylineno;
     a->s = s;
     return (struct ast *)a;
@@ -115,6 +266,7 @@ struct ast *ast_newnode_builtin(int fn, struct ast *args)
 {
     struct builtInFn *a = malloc(sizeof(struct builtInFn));
     a->nodetype = BUILTIN;
+    a->type = T_VOID; // TODO remove when functions can have return types
     a->lineno = yylineno;
     a->fn = fn;
     a->args = args;
@@ -126,6 +278,13 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *tr
     struct flow *a = malloc(sizeof(struct flow));
     a->nodetype = nodetype;
     a->lineno = yylineno;
+    a->type = T_VOID;
+    if (condition->type != T_BOOL)
+    {
+        char s[100];
+        sprintf(s, "%d: Condition must be a '%s', but was '%s'\n", yylineno, lookup_value_type_name(T_BOOL), lookup_value_type_name(condition->type));
+        add_syntax_err(s);
+    }
     a->condition = condition;
     a->true_branch = true_branch;
     a->false_branch = false_branch;
@@ -137,10 +296,39 @@ struct ast *ast_newnode_if_expr(struct ast *condition, struct ast *true_branch, 
     struct flow *a = malloc(sizeof(struct flow));
     a->nodetype = IF_EXPR;
     a->lineno = yylineno;
+    if (condition->type != T_BOOL)
+    {
+        char s[100];
+        sprintf(s, "%d: Condition must be a '%s', but was '%s'\n", yylineno, lookup_value_type_name(T_BOOL), lookup_value_type_name(condition->type));
+        add_syntax_err(s);
+    }
     a->condition = condition;
+
+    if (true_branch->type != false_branch->type)
+    {
+        char s[100];
+        sprintf(s, "%d: Branches must be of the same type ('%s' vs. '%s')\n", yylineno, lookup_value_type_name(true_branch->type), lookup_value_type_name(false_branch->type));
+        add_syntax_err(s);
+    }
+
+    a->type = true_branch->type;
     a->true_branch = true_branch;
     a->false_branch = false_branch;
     return (struct ast *)a;
+}
+
+void ast_interpret(struct ast *a)
+{
+    if (error_buf_ptr > 0)
+    {
+        for (int i = 0; i < error_buf_ptr; i++)
+        {
+            printf("%s", error_buf[i]);
+        }
+        exit(1);
+    }
+
+    ast_eval(a);
 }
 
 struct value *ast_eval(struct ast *a)
