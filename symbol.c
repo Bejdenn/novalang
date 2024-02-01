@@ -35,7 +35,7 @@ struct symbol *symlookup(char *s)
             return &symtab[i];
     }
 
-    return 0;
+    return NULL;
 }
 
 struct symbol *symadd(char *s, int type)
@@ -43,9 +43,9 @@ struct symbol *symadd(char *s, int type)
     struct symbol *sym = symlookup(s);
     if (sym)
     {
-        // TODO: when the lookup returns a symbol, we already
-        // have a symbol with the same name in the table. Throw an error?
-        return NULL;
+        // if the symbol already exists, we replace its type to allow further type checks to run
+        sym->type = type;
+        return sym;
     }
 
     for (int i = 0; i < TBL_SIZE; i++)

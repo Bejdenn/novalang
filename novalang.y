@@ -31,7 +31,6 @@
 %token IF ELSE FOR
 
 %type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration VarAssignment BuiltInFunction IfExpression IfStatement ForStatement
-%type <s> DefinedId
 
 %start Start
 
@@ -65,11 +64,11 @@ ForStatement: FOR Expression '{' '}' { }
 
 BuiltInFunction: BUILTIN_FN '(' Expression ')' { $$ = ast_newnode_builtin($1, $3); }
 
-ShortVarDeclaration: ID ':' '=' Expression { $$ = ast_newnode_assign(symadd($1, T_UNKNOWN), $4); }
+ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$ = ast_newnode_assign($1, $4); }
 
-VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl(symadd($1, $3)); }
+VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl($1, $3); }
 
-VarAssignment: DefinedId '=' Expression { $$ = ast_newnode_assign($1, $3); }
+VarAssignment: ID '=' Expression { $$ = ast_newnode_assign($1, $3); }
 
 Expression: '(' Expression ')' { $$ = $2; }
     | Expression CMP Expression { $$ = ast_newnode_op($2, $1, $3); }
@@ -82,19 +81,9 @@ Expression: '(' Expression ')' { $$ = $2; }
     | NUM { $$ = ast_newnode_num($1); }
     | STRING { $$ = ast_newnode_str($1); }
     | BOOL { $$ = ast_newnode_bool($1); }
-    | DefinedId { $$ = ast_newnode_ref($1); }
+    | ID { $$ = ast_newnode_ref($1); }
 
 IfExpression: IF Expression '{' Expression '}' ELSE '{' Expression '}' { $$ = ast_newnode_if_expr($2, $4, $8); }
-
-DefinedId: ID {
-    struct symbol *s = symlookup($1);
-    if (!s) {
-        yyerror("identifier %s is undefined", $1);
-        abort();
-    } else {
-        $$ = s;
-    }
-}
 
 %%
 

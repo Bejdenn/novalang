@@ -219,21 +219,39 @@ struct ast *ast_newnode_bool(int b)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_decl(struct symbol *s)
+struct ast *ast_newnode_decl(char *sym_name, enum value_type type)
 {
     struct symdecl *a = malloc(sizeof(struct symdecl));
     a->nodetype = DECLARATION;
     a->type = T_VOID;
     a->lineno = yylineno;
-    a->s = s;
+
+    if (symlookup(sym_name))
+    {
+        char str[100];
+        sprintf(str, "%d: Symbol '%s' already declared\n", yylineno, sym_name);
+        add_syntax_err(str);
+    }
+
+    a->s = symadd(sym_name, type);
+
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_assign(struct symbol *s, struct ast *v)
+struct ast *ast_newnode_assign(char *sym_name, struct ast *v)
 {
     struct symassign *a = malloc(sizeof(struct symassign));
     a->nodetype = ASSIGNMENT;
     a->type = T_VOID;
+
+    struct symbol *s = symlookup(sym_name);
+    if (!s)
+    {
+        char str[100];
+        sprintf(str, "%d: Undeclared reference '%s'\n", yylineno, sym_name);
+        add_syntax_err(str);
+        return (struct ast *)a;
+    }
 
     if (s->type == T_UNKNOWN)
     {
@@ -252,10 +270,21 @@ struct ast *ast_newnode_assign(struct symbol *s, struct ast *v)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_ref(struct symbol *s)
+struct ast *ast_newnode_ref(char *sym_name)
 {
     struct symref *a = malloc(sizeof(struct symref));
     a->nodetype = REFERENCE;
+
+    struct symbol *s = symlookup(sym_name);
+    if (!s)
+    {
+        char str[100];
+        sprintf(str, "%d: Undeclared reference '%s'\n", yylineno, sym_name);
+        add_syntax_err(str);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
     a->type = s->type;
     a->lineno = yylineno;
     a->s = s;
@@ -323,7 +352,7 @@ void ast_interpret(struct ast *a)
     {
         for (int i = 0; i < error_buf_ptr; i++)
         {
-            printf("%s", error_buf[i]);
+            fprintf(stderr, "%s", error_buf[i]);
         }
         exit(1);
     }
