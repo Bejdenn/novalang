@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for f in $(find ./tests/ -name "*.nl" -type f | sort); do
+for f in $(find ./tests/ -name "*.nva" -type f | sort); do
     out=$(cat $f | ./novalang 2>&1 1>/dev/null)
 
     if [ $? -eq 0 ]; then
