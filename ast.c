@@ -54,23 +54,23 @@ void type_mismatch(int lineno, int expected, int was)
     printf("%d: Type mismatch: expected %s, but was %s\n", lineno, lookup_value_type_name(expected), lookup_value_type_name(was));
 }
 
-char *to_string(struct value *v)
+char *to_string(enum value_type type, union s_val *u)
 {
     char *s = malloc(100);
-    switch (v->type)
+    switch (type)
     {
     case T_INT:
-        sprintf(s, "%d", v->u->num);
+        sprintf(s, "%d", u->num);
         break;
     case T_STR:
-        sprintf(s, "%s", v->u->str);
+        sprintf(s, "%s", u->str);
         break;
     case T_BOOL:
-        sprintf(s, "%s", v->u->boolean ? "true" : "false");
+        sprintf(s, "%s", u->boolean ? "true" : "false");
         break;
     default:
-        // TODO we should never get here
-        sprintf(s, "Unknown type: %d", v->type);
+        printf("Cannot convert value of type '%s' to string\n", lookup_value_type_name(type));
+        exit(1);
         break;
     }
 
@@ -335,7 +335,6 @@ struct value *ast_eval(struct ast *a)
 {
     struct value *v = malloc(sizeof(struct value));
     v->u = malloc(sizeof(union s_val));
-    v->type = T_VOID;
     switch (a->nodetype)
     {
     case STATEMENT:
@@ -344,35 +343,19 @@ struct value *ast_eval(struct ast *a)
     case DECLARATION:
         return v;
     case ASSIGNMENT:
-        struct symassign *one = (struct symassign *)a;
-        struct value *other = ast_eval(((struct symassign *)a)->v);
-        // Support walrus operator by having it tagged as unknown until value is assigned
-        if (one->s->type == T_UNKNOWN)
-        {
-            one->s->type = other->type;
-        }
-        else if (one->s->type != other->type)
-        {
-            type_mismatch(one->lineno, one->s->type, other->type);
-            exit(1);
-        }
-
-        one->s->val = other->u;
+        struct symassign *asgn = (struct symassign *)a;
+        asgn->s->val = ast_eval(((struct symassign *)a)->v)->u;
         break;
     case T_INT:
-        v->type = T_INT;
         v->u->num = ((struct numval *)a)->number;
         break;
     case T_STR:
-        v->type = T_STR;
         v->u->str = ((struct strval *)a)->str;
         break;
     case T_BOOL:
-        v->type = T_BOOL;
         v->u->boolean = ((struct boolval *)a)->boolean;
         break;
     case REFERENCE:
-        v->type = ((struct symref *)a)->s->type;
         v->u = ((struct symref *)a)->s->val;
         break;
     case '+':
@@ -392,37 +375,18 @@ struct value *ast_eval(struct ast *a)
         break;
     case IF_EXPR:
         struct flow *f = (struct flow *)a;
-        struct value *cond = ast_eval(f->condition);
-        if (cond->type != T_BOOL)
+        if (ast_eval(f->condition)->u->boolean)
         {
-            printf("Condition must be a boolean\n");
-            exit(1);
-        }
-        struct value *true_v = ast_eval(f->true_branch);
-        struct value *false_v = ast_eval(f->false_branch);
-        if (true_v->type != false_v->type)
-        {
-            type_mismatch(f->lineno, true_v->type, false_v->type);
-            exit(1);
-        }
-        if (cond->u->boolean)
-        {
-            v = true_v;
+            v = ast_eval(f->true_branch);
         }
         else
         {
-            v = false_v;
+            v = ast_eval(f->false_branch);
         }
         break;
     case IF_STMT:
         f = (struct flow *)a;
-        cond = ast_eval(f->condition);
-        if (cond->type != T_BOOL)
-        {
-            printf("Condition must be a boolean\n");
-            exit(1);
-        }
-        if (cond->u->boolean)
+        if (ast_eval(f->condition)->u->boolean)
         {
             ast_eval(f->true_branch);
         }
@@ -446,7 +410,8 @@ struct value *ast_eval(struct ast *a)
         switch (node->fn)
         {
         case PRINT:
-            printf("%s\n", to_string(ast_eval(node->args)));
+            printf("%s\n", to_string(node->args->type, ast_eval(node->args)->u));
+            break;
         }
         break;
     default:
@@ -459,67 +424,57 @@ struct value *ast_eval(struct ast *a)
 
 void do_arithm_op(struct value *v, int op, struct ast *a)
 {
-    v->type = T_INT;
     struct value *l_val = ast_eval(a->l);
     struct value *r_val = ast_eval(a->r);
 
     switch (op)
     {
     case '+':
-        if (l_val->type == T_STR)
+        switch (a->l->type)
         {
-            v->type = T_STR;
-            v->u->str = str_concat(l_val->u->str, to_string(r_val));
+        case T_INT:
+            switch (a->r->type)
+            {
+            case T_INT:
+                v->u->num = l_val->u->num + r_val->u->num;
+                break;
+            case T_STR:
+                v->u->str = str_concat(to_string(a->l->type, l_val->u), r_val->u->str);
+                break;
+            default:
+                break;
+            }
             break;
-        }
-        else if (r_val->type == T_STR)
-        {
-            v->type = T_STR;
-            v->u->str = str_concat(to_string(l_val), r_val->u->str);
+        case T_STR:
+            switch (a->r->type)
+            {
+            case T_INT:
+                v->u->str = str_concat(l_val->u->str, to_string(a->r->type, r_val->u));
+                break;
+            case T_STR:
+                v->u->str = str_concat(l_val->u->str, r_val->u->str);
+                break;
+            case T_BOOL:
+                v->u->str = str_concat(l_val->u->str, to_string(a->r->type, r_val->u));
+                break;
+            default:
+                break;
+            }
             break;
-        }
-
-        if (l_val->type == T_INT && r_val->type == T_INT)
-        {
-            v->u->num = l_val->u->num + r_val->u->num;
+        default:
             break;
-        }
-        else
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
         }
         break;
     case '-':
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->num = l_val->u->num - r_val->u->num;
         break;
     case '%':
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->num = l_val->u->num % r_val->u->num;
         break;
     case '*':
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->num = l_val->u->num * r_val->u->num;
         break;
     case '/':
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->num = l_val->u->num / r_val->u->num;
         break;
     }
@@ -527,18 +482,12 @@ void do_arithm_op(struct value *v, int op, struct ast *a)
 
 void do_cmp(struct value *v, int op, struct ast *a)
 {
-    v->type = T_BOOL;
     struct value *l_val = ast_eval(a->l);
     struct value *r_val = ast_eval(a->r);
 
     switch (op)
     {
     case EQ:
-        if (l_val->type != r_val->type)
-        {
-            v->u->boolean = 0;
-            break;
-        }
         switch (l_val->type)
         {
         case T_INT:
@@ -553,11 +502,6 @@ void do_cmp(struct value *v, int op, struct ast *a)
         }
         break;
     case N_EQ:
-        if (l_val->type != r_val->type)
-        {
-            v->u->boolean = 1;
-            break;
-        }
         switch (l_val->type)
         {
         case T_INT:
@@ -572,35 +516,15 @@ void do_cmp(struct value *v, int op, struct ast *a)
         }
         break;
     case GRT:
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->boolean = l_val->u->num > r_val->u->num;
         break;
     case LESS:
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->boolean = l_val->u->num < r_val->u->num;
         break;
     case GRT_OR_EQ:
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->boolean = l_val->u->num >= r_val->u->num;
         break;
     case LESS_OR_EQ:
-        if (l_val->type != T_INT || r_val->type != T_INT)
-        {
-            type_mismatch(a->lineno, l_val->type, r_val->type);
-            exit(1);
-        }
         v->u->boolean = l_val->u->num <= r_val->u->num;
         break;
     }
