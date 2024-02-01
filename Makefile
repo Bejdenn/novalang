@@ -5,7 +5,7 @@ OBJ=novalang.tab.o lex.yy.o symbol.o ast.o
 
 .PHONY=clean test
 
-novalang: $(OBJ) novalang.svg
+novalang: $(OBJ)
 	$(CC) -o $@ $(OBJ) -ll
 
 %.o: %.c %.h
