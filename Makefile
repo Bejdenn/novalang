@@ -11,7 +11,7 @@ novalang: $(OBJ) novalang.svg
 %.o: %.c %.h
 
 novalang.tab.c novalang.tab.h: novalang.y
-	bison --report all --debug --graph=novalang.dot --defines novalang.y -Wcounterexamples
+	bison --defines novalang.y -Wcounterexamples
 
 lex.yy.c: novalang.l
 	flex novalang.l
