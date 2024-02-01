@@ -54,7 +54,7 @@ struct symbol *symadd(char *s, int type)
         {
             symtab[i].name = strdup(s);
             symtab[i].type = type;
-            symtab[i].val = malloc(sizeof(struct value));
+            symtab[i].val = malloc(sizeof(union s_val));
             return &symtab[i];
         }
     }

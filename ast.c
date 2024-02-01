@@ -13,8 +13,8 @@ void add_syntax_err(char *err)
     error_buf[error_buf_ptr++] = strdup(err);
 }
 
-void do_arithm_op(struct value *, int, struct ast *);
-void do_cmp(struct value *, int, struct ast *);
+void do_arithm_op(union s_val *, int, struct ast *);
+void do_cmp(union s_val *, int, struct ast *);
 
 enum value_type op_get_type(int, char, struct ast *, struct ast *);
 
@@ -331,10 +331,9 @@ void ast_interpret(struct ast *a)
     ast_eval(a);
 }
 
-struct value *ast_eval(struct ast *a)
+union s_val *ast_eval(struct ast *a)
 {
-    struct value *v = malloc(sizeof(struct value));
-    v->u = malloc(sizeof(union s_val));
+    union s_val *v = malloc(sizeof(union s_val));
     switch (a->nodetype)
     {
     case STATEMENT:
@@ -344,19 +343,19 @@ struct value *ast_eval(struct ast *a)
         return v;
     case ASSIGNMENT:
         struct symassign *asgn = (struct symassign *)a;
-        asgn->s->val = ast_eval(((struct symassign *)a)->v)->u;
+        asgn->s->val = ast_eval(((struct symassign *)a)->v);
         break;
     case T_INT:
-        v->u->num = ((struct numval *)a)->number;
+        v->num = ((struct numval *)a)->number;
         break;
     case T_STR:
-        v->u->str = ((struct strval *)a)->str;
+        v->str = ((struct strval *)a)->str;
         break;
     case T_BOOL:
-        v->u->boolean = ((struct boolval *)a)->boolean;
+        v->boolean = ((struct boolval *)a)->boolean;
         break;
     case REFERENCE:
-        v->u = ((struct symref *)a)->s->val;
+        v = ((struct symref *)a)->s->val;
         break;
     case '+':
     case '-':
@@ -375,7 +374,7 @@ struct value *ast_eval(struct ast *a)
         break;
     case IF_EXPR:
         struct flow *f = (struct flow *)a;
-        if (ast_eval(f->condition)->u->boolean)
+        if (ast_eval(f->condition)->boolean)
         {
             v = ast_eval(f->true_branch);
         }
@@ -386,7 +385,7 @@ struct value *ast_eval(struct ast *a)
         break;
     case IF_STMT:
         f = (struct flow *)a;
-        if (ast_eval(f->condition)->u->boolean)
+        if (ast_eval(f->condition)->boolean)
         {
             ast_eval(f->true_branch);
         }
@@ -400,7 +399,7 @@ struct value *ast_eval(struct ast *a)
         break;
     case FOR_STMT:
         f = (struct flow *)a;
-        for (; ast_eval(f->condition)->u->boolean;)
+        for (; ast_eval(f->condition)->boolean;)
         {
             ast_eval(f->true_branch);
         }
@@ -410,7 +409,7 @@ struct value *ast_eval(struct ast *a)
         switch (node->fn)
         {
         case PRINT:
-            printf("%s\n", to_string(node->args->type, ast_eval(node->args)->u));
+            printf("%s\n", to_string(node->args->type, ast_eval(node->args)));
             break;
         }
         break;
@@ -422,10 +421,10 @@ struct value *ast_eval(struct ast *a)
     return v;
 }
 
-void do_arithm_op(struct value *v, int op, struct ast *a)
+void do_arithm_op(union s_val *v, int op, struct ast *a)
 {
-    struct value *l_val = ast_eval(a->l);
-    struct value *r_val = ast_eval(a->r);
+    union s_val *l_val = ast_eval(a->l);
+    union s_val *r_val = ast_eval(a->r);
 
     switch (op)
     {
@@ -436,10 +435,10 @@ void do_arithm_op(struct value *v, int op, struct ast *a)
             switch (a->r->type)
             {
             case T_INT:
-                v->u->num = l_val->u->num + r_val->u->num;
+                v->num = l_val->num + r_val->num;
                 break;
             case T_STR:
-                v->u->str = str_concat(to_string(a->l->type, l_val->u), r_val->u->str);
+                v->str = str_concat(to_string(a->l->type, l_val), r_val->str);
                 break;
             default:
                 break;
@@ -449,13 +448,13 @@ void do_arithm_op(struct value *v, int op, struct ast *a)
             switch (a->r->type)
             {
             case T_INT:
-                v->u->str = str_concat(l_val->u->str, to_string(a->r->type, r_val->u));
+                v->str = str_concat(l_val->str, to_string(a->r->type, r_val));
                 break;
             case T_STR:
-                v->u->str = str_concat(l_val->u->str, r_val->u->str);
+                v->str = str_concat(l_val->str, r_val->str);
                 break;
             case T_BOOL:
-                v->u->str = str_concat(l_val->u->str, to_string(a->r->type, r_val->u));
+                v->str = str_concat(l_val->str, to_string(a->r->type, r_val));
                 break;
             default:
                 break;
@@ -466,66 +465,72 @@ void do_arithm_op(struct value *v, int op, struct ast *a)
         }
         break;
     case '-':
-        v->u->num = l_val->u->num - r_val->u->num;
+        v->num = l_val->num - r_val->num;
         break;
     case '%':
-        v->u->num = l_val->u->num % r_val->u->num;
+        v->num = l_val->num % r_val->num;
         break;
     case '*':
-        v->u->num = l_val->u->num * r_val->u->num;
+        v->num = l_val->num * r_val->num;
         break;
     case '/':
-        v->u->num = l_val->u->num / r_val->u->num;
+        v->num = l_val->num / r_val->num;
         break;
     }
 }
 
-void do_cmp(struct value *v, int op, struct ast *a)
+void do_cmp(union s_val *v, int op, struct ast *a)
 {
-    struct value *l_val = ast_eval(a->l);
-    struct value *r_val = ast_eval(a->r);
+    union s_val *l_val = ast_eval(a->l);
+    union s_val *r_val = ast_eval(a->r);
 
     switch (op)
     {
     case EQ:
-        switch (l_val->type)
+        switch (a->l->type)
         {
         case T_INT:
-            v->u->boolean = l_val->u->num == r_val->u->num;
+            v->boolean = l_val->num == r_val->num;
             break;
         case T_STR:
-            v->u->boolean = strcmp(l_val->u->str, r_val->u->str) == 0;
+            v->boolean = strcmp(l_val->str, r_val->str) == 0;
             break;
         case T_BOOL:
-            v->u->boolean = l_val->u->boolean == r_val->u->boolean;
+            v->boolean = l_val->boolean == r_val->boolean;
+            break;
+        default:
             break;
         }
         break;
     case N_EQ:
-        switch (l_val->type)
+        switch (a->l->type)
         {
         case T_INT:
-            v->u->boolean = l_val->u->num != r_val->u->num;
+            v->boolean = l_val->num != r_val->num;
             break;
         case T_STR:
-            v->u->boolean = strcmp(l_val->u->str, r_val->u->str) != 0;
+            v->boolean = strcmp(l_val->str, r_val->str) != 0;
             break;
         case T_BOOL:
-            v->u->boolean = l_val->u->boolean != r_val->u->boolean;
+            v->boolean = l_val->boolean != r_val->boolean;
+            break;
+        default:
             break;
         }
         break;
     case GRT:
-        v->u->boolean = l_val->u->num > r_val->u->num;
+        v->boolean = l_val->num > r_val->num;
         break;
     case LESS:
-        v->u->boolean = l_val->u->num < r_val->u->num;
+        v->boolean = l_val->num < r_val->num;
         break;
     case GRT_OR_EQ:
-        v->u->boolean = l_val->u->num >= r_val->u->num;
+        v->boolean = l_val->num >= r_val->num;
         break;
     case LESS_OR_EQ:
-        v->u->boolean = l_val->u->num <= r_val->u->num;
+        v->boolean = l_val->num <= r_val->num;
+        break;
+    default:
         break;
     }
 }

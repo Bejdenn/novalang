@@ -17,12 +17,6 @@ struct symbol
     int type;
 };
 
-struct value
-{
-    int type;
-    union s_val *u;
-};
-
 union s_val
 {
     int num;

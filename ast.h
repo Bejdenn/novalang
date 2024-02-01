@@ -119,6 +119,6 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *tr
 struct ast *ast_newnode_if_expr(struct ast *condition, struct ast *true_branch, struct ast *false_branch);
 
 void ast_interpret(struct ast *);
-struct value *ast_eval(struct ast *);
+union s_val *ast_eval(struct ast *);
 
 void ast_free(struct ast *);
