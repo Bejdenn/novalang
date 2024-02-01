@@ -381,3 +381,6 @@ novalang.svg
 
 # Executable
 novalang
+
+# VS Code
+.vscode
