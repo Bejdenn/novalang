@@ -1,0 +1,5 @@
+dog_count := read_int();
+
+print("There are " + dog_count + " dogs.");
+
+print("Are there dogs? " + (dog_count > 0));
