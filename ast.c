@@ -323,7 +323,7 @@ struct ast *ast_newnode_builtin(char *fn, struct ast *args)
     }
 
     struct symbol *param = builtin_fn->params;
-    for (struct ast *arg = args; arg != NULL; arg = arg->r)
+    for (struct ast *arg = args; arg != NULL && param != NULL; arg = arg->r)
     {
         if (param->type != arg->l->type)
         {
@@ -483,7 +483,7 @@ union s_val *ast_eval(struct ast *a)
         }
         else if (strcmp(bif->fn->name, "read_int") == 0)
         {
-            char line[256];
+            char line[128] = {0};
             if (fgets(line, sizeof(line), stdin))
             {
                 if (1 != sscanf(line, "%d", &v->num))

@@ -8,7 +8,7 @@ struct symbol symtab[TBL_SIZE];
 struct fn_symbol BUILTIN_FUNCTIONS[TBL_SIZE] =
     {{.name = "print", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "s", .type = T_STR}}},
      {.name = "print_int", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "i", .type = T_INT}}},
-     {.name = "read_int", .return_type = T_INT, .params_count = 0}};
+     {.name = "read_int", .return_type = T_INT, .params = 0, .params_count = 0}};
 
 char *lookup_value_type_name(enum value_type type)
 {

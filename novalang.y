@@ -68,7 +68,6 @@ Statement: IfStatement
 
 ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $3, $1); }
     | Arg { $$ = ast_newnode(ARG_LIST, $1, NULL); }
-    | %empty { }
 
 Arg: Expression 
 
@@ -82,6 +81,7 @@ ForStatement: FOR Expression '{' '}' { }
     | FOR Expression '{' Statements '}' { $$ = ast_newnode_flow(FOR_STMT, $2, $4, NULL); }
 
 BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin($1, $3); }
+    | BUILTIN_FN '(' ')' { $$ = ast_newnode_builtin($1, NULL); }
 
 ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$ = ast_newnode_assign($1, $4); }
 
