@@ -6,7 +6,7 @@ OBJ=novalang.tab.o lex.yy.o symbol.o ast.o
 .PHONY=clean test
 
 novalang: $(OBJ)
-	$(CC) -o $@ $(OBJ) -ll
+	$(CC) -o $@ $(OBJ)
 
 %.o: %.c %.h
 

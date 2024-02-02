@@ -6,6 +6,7 @@
 
     int yylex(void);
     extern int yylineno;
+    extern FILE *yyin;
 
     void yyerror(char *s, ...)
     {
@@ -106,6 +107,22 @@ IfExpression: IF Expression '{' Expression '}' ELSE '{' Expression '}' { $$ = as
 
 %%
 
-int main(void) {
-    return yyparse();
+int main(int argc, char **argv)
+{
+    if (argc < 2) {
+        fprintf(stderr, "usage: %s <input file>\n", argv[0]);
+        return 1;
+    }
+
+    FILE *f = fopen(argv[1], "r");
+    if (!f) {
+        perror(argv[1]);
+        return 1;
+    }
+
+    int success = 0;    
+    yyin = f;
+    success = yyparse();
+    fclose(f);
+    return success;
 }
