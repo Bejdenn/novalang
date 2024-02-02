@@ -376,7 +376,6 @@ TSWLatexianTemp*
 # Bison
 *.tab.*
 *.dot
-*.output
 novalang.svg
 
 # Executable
