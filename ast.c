@@ -310,7 +310,7 @@ struct ast *ast_newnode_builtin(char *fn, struct ast *args)
     a->fn = builtin_fn;
 
     int nargs = 0;
-    for (struct ast *arg = args; arg != NULL; arg = arg->r)
+    for (struct ast *arg = args; arg != NULL; arg = arg->l)
     {
         nargs++;
     }
@@ -322,16 +322,16 @@ struct ast *ast_newnode_builtin(char *fn, struct ast *args)
         add_syntax_err(s);
     }
 
-    struct symbol *param = builtin_fn->params;
-    for (struct ast *arg = args; arg != NULL && param != NULL; arg = arg->r)
+    for (struct ast *arg = args; arg != NULL && builtin_fn->params != NULL; arg = arg->l)
     {
-        if (param->type != arg->l->type)
+        struct symbol param = builtin_fn->params[nargs - 1];
+        if (arg->r->type != param.type)
         {
             char s[100];
-            sprintf(s, "%d: Argument '%s' must be a '%s', but was '%s'\n", yylineno, param->name, lookup_value_type_name(param->type), lookup_value_type_name(arg->l->type));
+            sprintf(s, "%d: Argument '%s' must be a '%s', but was '%s'\n", yylineno, param.name, lookup_value_type_name(param.type), lookup_value_type_name(arg->r->type));
             add_syntax_err(s);
         }
-        param++;
+        nargs--;
     }
 
     a->args = args;
@@ -473,12 +473,12 @@ union s_val *ast_eval(struct ast *a)
         struct builtInFn *bif = ((struct builtInFn *)a);
         if (strcmp(bif->fn->name, "print") == 0)
         {
-            printf("%s\n", ast_eval(bif->args)->str);
+            printf("%s\n", ast_eval(bif->args->r)->str);
             break;
         }
         else if (strcmp(bif->fn->name, "print_int") == 0)
         {
-            printf("%d\n", ast_eval(bif->args)->num);
+            printf("%d\n", ast_eval(bif->args->r)->num);
             break;
         }
         else if (strcmp(bif->fn->name, "read_int") == 0)

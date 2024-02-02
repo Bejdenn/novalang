@@ -66,8 +66,8 @@ Statement: IfStatement
 
 // FnCall: ID '(' ArgList ')' {  }
 
-ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $3, $1); }
-    | Arg { $$ = ast_newnode(ARG_LIST, $1, NULL); }
+ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $1, $3); }
+    | Arg { $$ = ast_newnode(ARG_LIST, NULL, $1); }
 
 Arg: Expression 
 
