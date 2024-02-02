@@ -44,7 +44,7 @@
 %%
 
 Start: %empty
-    | Statements { ast_interpret($1); printf("Parser: ok\n"); }
+    | Statements { ast_interpret($1); }
 
 Statements: Statements Statement { $$ = ast_newnode(STATEMENT, $1, $2); }
     | Statement
