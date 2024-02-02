@@ -12,11 +12,7 @@ enum nodetype
     IF_STMT,
     IF_EXPR,
     FOR_STMT,
-};
-
-enum builtIns
-{
-    PRINT = 7,
+    ARG_LIST,
 };
 
 enum cmp
@@ -87,12 +83,21 @@ struct symref
     struct symbol *s;
 };
 
+struct arglist
+{
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct ast *expr;
+    struct arglist *next;
+};
+
 struct builtInFn
 {
     int nodetype;
     int lineno;
     enum value_type type;
-    int fn;
+    struct fn_symbol *fn;
     struct ast *args;
 };
 
@@ -114,7 +119,7 @@ struct ast *ast_newnode_bool(int b);
 struct ast *ast_newnode_decl(char *sym_name, enum value_type type);
 struct ast *ast_newnode_assign(char *sym_name, struct ast *v);
 struct ast *ast_newnode_ref(char *sym_name);
-struct ast *ast_newnode_builtin(int fn, struct ast *args);
+struct ast *ast_newnode_builtin(char *fn, struct ast *args);
 struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *true_branch, struct ast *false_branch);
 struct ast *ast_newnode_if_expr(struct ast *condition, struct ast *true_branch, struct ast *false_branch);
 

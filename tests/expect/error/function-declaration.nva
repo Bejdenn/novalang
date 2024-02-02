@@ -1,0 +1,13 @@
+fn read_line(): int {
+    print("Function declaration with no arguments");
+}
+
+fn random_number(up: int): int {
+    print("Function declaration with a single argument");
+}
+
+fn max(x: int, y: int): int {
+    print("Function declaration with more than one argument");
+}
+
+i := max(x = 2, y = 2);

@@ -5,6 +5,10 @@
 #include <stdbool.h>
 
 struct symbol symtab[TBL_SIZE];
+struct fn_symbol BUILTIN_FUNCTIONS[TBL_SIZE] =
+    {{.name = "print", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "s", .type = T_STR}}},
+     {.name = "print_int", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "i", .type = T_INT}}},
+     {.name = "read_int", .return_type = T_INT, .params_count = 0}};
 
 char *lookup_value_type_name(enum value_type type)
 {
@@ -60,6 +64,17 @@ struct symbol *symadd(char *s, int type)
     }
 
     /* at this point we don't have any space in the table anymore */
+
+    return NULL;
+}
+
+struct fn_symbol *fnlookup(char *s)
+{
+    for (int i = 0; i < TBL_SIZE; i++)
+    {
+        if (BUILTIN_FUNCTIONS[i].name && strcmp(BUILTIN_FUNCTIONS[i].name, s) == 0)
+            return &BUILTIN_FUNCTIONS[i];
+    }
 
     return NULL;
 }

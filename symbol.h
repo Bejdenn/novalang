@@ -24,8 +24,19 @@ union s_val
     int boolean;
 };
 
+struct fn_symbol
+{
+    char *name;
+    int return_type;
+    struct symbol *params;
+    int params_count;
+};
+
 #define TBL_SIZE 25
+
 extern struct symbol symtab[TBL_SIZE];
+extern struct fn_symbol BUILTIN_FUNCTIONS[TBL_SIZE];
 
 struct symbol *symlookup(char *);
 struct symbol *symadd(char *, int);
+struct fn_symbol *fnlookup(char *);

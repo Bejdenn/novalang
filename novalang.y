@@ -25,12 +25,14 @@
     struct ast *a;
 }
 
-%token <str> ID STRING
-%token <num> NUM BUILTIN_FN TYPE
+%token <str> ID STRING BUILTIN_FN
+%token <num> NUM TYPE
 %token <boolean> BOOL
-%token IF ELSE FOR
+%token IF ELSE FOR FN
 
-%type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration VarAssignment BuiltInFunction IfExpression IfStatement ForStatement
+%type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration
+%type <a> VarAssignment BuiltInFnCall IfExpression IfStatement ForStatement 
+%type <a> /* FnDeclaration ParamList FnCall */ ArgList Arg
 
 %start Start
 
@@ -48,10 +50,26 @@ Statements: Statements Statement { $$ = ast_newnode(STATEMENT, $1, $2); }
 
 Statement: IfStatement
     | ForStatement
+//    | FnDeclaration
+//    | FnCall ';'
     | ShortVarDeclaration ';'
     | VarDeclaration ';'
     | VarAssignment ';'
-    | BuiltInFunction ';'
+    | BuiltInFnCall ';'
+
+// FnDeclaration: FN ID '(' ParamList ')' ':' TYPE '{' Statements '}' { }
+
+// ParamList: ParamList ',' ID ':' TYPE { }
+//    | ID ':' TYPE { }
+//    | %empty { }
+
+// FnCall: ID '(' ArgList ')' {  }
+
+ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $3, $1); }
+    | Arg { $$ = ast_newnode(ARG_LIST, $1, NULL); }
+    | %empty { }
+
+Arg: Expression 
 
 IfStatement: IF Expression '{' '}' { }
     | IF Expression '{' Statements '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, NULL); }
@@ -62,7 +80,7 @@ IfStatement: IF Expression '{' '}' { }
 ForStatement: FOR Expression '{' '}' { }
     | FOR Expression '{' Statements '}' { $$ = ast_newnode_flow(FOR_STMT, $2, $4, NULL); }
 
-BuiltInFunction: BUILTIN_FN '(' Expression ')' { $$ = ast_newnode_builtin($1, $3); }
+BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin($1, $3); }
 
 ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$ = ast_newnode_assign($1, $4); }
 
@@ -78,6 +96,7 @@ Expression: '(' Expression ')' { $$ = $2; }
     | Expression '+' Expression { $$ = ast_newnode_op('+', $1, $3); }
     | Expression '-' Expression { $$ = ast_newnode_op('-', $1, $3); }
     | IfExpression { $$ = $1; }
+    | BuiltInFnCall
     | NUM { $$ = ast_newnode_num($1); }
     | STRING { $$ = ast_newnode_str($1); }
     | BOOL { $$ = ast_newnode_bool($1); }

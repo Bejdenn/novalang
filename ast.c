@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern struct symbol symtab[];
-
 char *error_buf[100];
 int error_buf_ptr = 0;
 
@@ -291,13 +289,51 @@ struct ast *ast_newnode_ref(char *sym_name)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_builtin(int fn, struct ast *args)
+struct ast *ast_newnode_builtin(char *fn, struct ast *args)
 {
     struct builtInFn *a = malloc(sizeof(struct builtInFn));
     a->nodetype = BUILTIN;
-    a->type = T_VOID; // TODO remove when functions can have return types
+
+    struct fn_symbol *builtin_fn = fnlookup(fn);
+
+    if (!builtin_fn)
+    {
+        char s[100];
+        sprintf(s, "%d: Unknown function '%s'\n", yylineno, fn);
+        add_syntax_err(s);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
+    a->type = builtin_fn->return_type;
     a->lineno = yylineno;
-    a->fn = fn;
+    a->fn = builtin_fn;
+
+    int nargs = 0;
+    for (struct ast *arg = args; arg != NULL; arg = arg->r)
+    {
+        nargs++;
+    }
+
+    if (nargs != builtin_fn->params_count)
+    {
+        char s[100];
+        sprintf(s, "%d: Function '%s' expects %d arguments, but was given %d\n", yylineno, builtin_fn->name, builtin_fn->params_count, nargs);
+        add_syntax_err(s);
+    }
+
+    struct symbol *param = builtin_fn->params;
+    for (struct ast *arg = args; arg != NULL; arg = arg->r)
+    {
+        if (param->type != arg->l->type)
+        {
+            char s[100];
+            sprintf(s, "%d: Argument '%s' must be a '%s', but was '%s'\n", yylineno, param->name, lookup_value_type_name(param->type), lookup_value_type_name(arg->l->type));
+            add_syntax_err(s);
+        }
+        param++;
+    }
+
     a->args = args;
     return (struct ast *)a;
 }
@@ -434,14 +470,39 @@ union s_val *ast_eval(struct ast *a)
         }
         break;
     case BUILTIN:
-        struct builtInFn *node = ((struct builtInFn *)a);
-        switch (node->fn)
+        struct builtInFn *bif = ((struct builtInFn *)a);
+        if (strcmp(bif->fn->name, "print") == 0)
         {
-        case PRINT:
-            printf("%s\n", to_string(node->args->type, ast_eval(node->args)));
+            printf("%s\n", ast_eval(bif->args)->str);
             break;
         }
+        else if (strcmp(bif->fn->name, "print_int") == 0)
+        {
+            printf("%d\n", ast_eval(bif->args)->num);
+            break;
+        }
+        else if (strcmp(bif->fn->name, "read_int") == 0)
+        {
+            char line[256];
+            if (fgets(line, sizeof(line), stdin))
+            {
+                if (1 != sscanf(line, "%d", &v->num))
+                {
+                    printf("Invalid input\n");
+                    exit(1);
+                }
+            }
+            break;
+        }
+        else
+        {
+            // normally this is checked when type checking, but who knows
+            printf("Unknown built-in function: %s\n", bif->fn->name);
+            exit(1);
+        }
         break;
+    case ARG_LIST:
+        return ast_eval(a->l);
     default:
         printf("Unknown AST node type: %d\n", a->nodetype);
         exit(1);

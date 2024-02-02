@@ -37,6 +37,7 @@ IDENTIFIER [a-zA-Z0-9_]+
 ")" |
 "{" |
 "}" |
+"," |
 "=" { return yytext[0]; }
 
 "mod" { return MOD; }
@@ -57,6 +58,8 @@ IDENTIFIER [a-zA-Z0-9_]+
 "else" { return ELSE; }
 "for"  { return FOR; }
 
+"fn" { return FN; }
+
 {INT} {
     striplz(yytext);
     yylval.num = strtol(yytext, NULL, 10);
@@ -74,7 +77,9 @@ IDENTIFIER [a-zA-Z0-9_]+
     return BOOL;
 }
 
-"print" { yylval.num = PRINT; return BUILTIN_FN; }
+"print" |
+"print_int" |
+"read_int" { yylval.str = strdup(yytext); return BUILTIN_FN; }
 
 {IDENTIFIER} { 
     yylval.str = strdup(yytext);
