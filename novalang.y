@@ -71,13 +71,14 @@ ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $1, $3); }
 
 Arg: Expression 
 
-IfStatement: IF Expression '{' '}' { }
+IfStatement: IF Expression '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, NULL, NULL); }
     | IF Expression '{' Statements '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, NULL); }
     | IF Expression '{' Statements '}' ELSE '{' Statements '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, $8); }
+    | IF Expression '{' Statements '}' ELSE IfStatement { $$ = ast_newnode_flow(IF_STMT, $2, $4, $7); }
     | IF Expression '{' Statements '}' ELSE '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, NULL); }
     | IF Expression '{' '}' ELSE '{' Statements '}' { /* Create AST node that negates condition */ }
 
-ForStatement: FOR Expression '{' '}' { }
+ForStatement: FOR Expression '{' '}' { $$ = ast_newnode_flow(FOR_STMT, $2, NULL, NULL);}
     | FOR Expression '{' Statements '}' { $$ = ast_newnode_flow(FOR_STMT, $2, $4, NULL); }
 
 BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin($1, $3); }
@@ -96,15 +97,15 @@ Expression: '(' Expression ')' { $$ = $2; }
     | Expression '/' Expression { $$ = ast_newnode_op('/', $1, $3); }
     | Expression '+' Expression { $$ = ast_newnode_op('+', $1, $3); }
     | Expression '-' Expression { $$ = ast_newnode_op('-', $1, $3); }
-    | IfExpression { $$ = $1; }
+    | IfExpression
     | BuiltInFnCall
     | NUM { $$ = ast_newnode_num($1); }
     | STRING { $$ = ast_newnode_str($1); }
     | BOOL { $$ = ast_newnode_bool($1); }
     | ID { $$ = ast_newnode_ref($1); }
 
-IfExpression: IF Expression '{' Expression '}' ELSE '{' Expression '}' { $$ = ast_newnode_if_expr($2, $4, $8); }
-
+IfExpression: IF Expression '{' Expression '}' ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $4, $7); }
+    | IF Expression '{' Expression '}' ELSE '{' Expression '}' { $$ = ast_newnode_flow(IF_EXPR, $2, $4, $8); }
 %%
 
 int main(int argc, char **argv)

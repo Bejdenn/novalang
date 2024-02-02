@@ -338,30 +338,12 @@ struct ast *ast_newnode_builtin(char *fn, struct ast *args)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *true_branch, struct ast *false_branch)
+struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *block, struct ast *branches)
 {
     struct flow *a = malloc(sizeof(struct flow));
     a->nodetype = nodetype;
     a->lineno = yylineno;
-    a->type = T_VOID;
-    if (condition->type != T_BOOL)
-    {
-        char s[100];
-        sprintf(s, "%d: Condition must be a '%s', but was '%s'\n", yylineno, lookup_value_type_name(T_BOOL), lookup_value_type_name(condition->type));
-        add_syntax_err(s);
-    }
-    a->condition = condition;
-    a->true_branch = true_branch;
-    a->false_branch = false_branch;
-    return (struct ast *)a;
-}
-
-struct ast *ast_newnode_if_expr(struct ast *condition, struct ast *true_branch, struct ast *false_branch)
-{
-    struct flow *a = malloc(sizeof(struct flow));
-    a->nodetype = IF_EXPR;
-    a->lineno = yylineno;
-    if (condition->type != T_BOOL)
+    if (condition != NULL && condition->type != T_BOOL)
     {
         char s[100];
         sprintf(s, "%d: Condition must be a '%s', but was '%s'\n", yylineno, lookup_value_type_name(T_BOOL), lookup_value_type_name(condition->type));
@@ -369,16 +351,16 @@ struct ast *ast_newnode_if_expr(struct ast *condition, struct ast *true_branch, 
     }
     a->condition = condition;
 
-    if (true_branch->type != false_branch->type)
+    if (branches != NULL && block->type != branches->type)
     {
         char s[100];
-        sprintf(s, "%d: Branches must be of the same type ('%s' vs. '%s')\n", yylineno, lookup_value_type_name(true_branch->type), lookup_value_type_name(false_branch->type));
+        sprintf(s, "%d: Branches must be of the same type ('%s' vs. '%s')\n", yylineno, lookup_value_type_name(block->type), lookup_value_type_name(branches->type));
         add_syntax_err(s);
     }
 
-    a->type = true_branch->type;
-    a->true_branch = true_branch;
-    a->false_branch = false_branch;
+    a->type = block->type;
+    a->block = block;
+    a->branches = branches;
     return (struct ast *)a;
 }
 
@@ -439,26 +421,39 @@ union s_val *ast_eval(struct ast *a)
         break;
     case IF_EXPR:
         struct flow *f = (struct flow *)a;
+        // else branch
+        if (f->condition == NULL)
+        {
+            return ast_eval(f->block);
+        }
+
         if (ast_eval(f->condition)->boolean)
         {
-            v = ast_eval(f->true_branch);
+            return ast_eval(f->block);
         }
         else
         {
-            v = ast_eval(f->false_branch);
+            return ast_eval(f->branches);
         }
         break;
     case IF_STMT:
         f = (struct flow *)a;
+        if (f->condition == NULL)
+        {
+            ast_eval(f->block);
+            break;
+        }
+
         if (ast_eval(f->condition)->boolean)
         {
-            ast_eval(f->true_branch);
+            if (f->block != NULL)
+                ast_eval(f->block);
         }
         else
         {
-            if (f->false_branch != NULL)
+            if (f->branches != NULL)
             {
-                ast_eval(f->false_branch);
+                ast_eval(f->branches);
             }
         }
         break;
@@ -466,7 +461,7 @@ union s_val *ast_eval(struct ast *a)
         f = (struct flow *)a;
         for (; ast_eval(f->condition)->boolean;)
         {
-            ast_eval(f->true_branch);
+            ast_eval(f->block);
         }
         break;
     case BUILTIN:
@@ -492,6 +487,16 @@ union s_val *ast_eval(struct ast *a)
                     exit(1);
                 }
             }
+            break;
+        }
+        else if (strcmp(bif->fn->name, "random_int") == 0)
+        {
+            srand(arc4random());
+
+            int upper = ast_eval(bif->args->r)->num;
+            int lower = ast_eval(bif->args->l->r)->num;
+
+            v->num = (rand() % (upper - lower + 1)) + lower;
             break;
         }
         else

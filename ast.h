@@ -107,8 +107,8 @@ struct flow
     int lineno;
     enum value_type type;
     struct ast *condition;
-    struct ast *true_branch;
-    struct ast *false_branch;
+    struct ast *block;
+    struct ast *branches;
 };
 
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r);
@@ -120,8 +120,7 @@ struct ast *ast_newnode_decl(char *sym_name, enum value_type type);
 struct ast *ast_newnode_assign(char *sym_name, struct ast *v);
 struct ast *ast_newnode_ref(char *sym_name);
 struct ast *ast_newnode_builtin(char *fn, struct ast *args);
-struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *true_branch, struct ast *false_branch);
-struct ast *ast_newnode_if_expr(struct ast *condition, struct ast *true_branch, struct ast *false_branch);
+struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *block, struct ast *branches);
 
 void ast_interpret(struct ast *);
 union s_val *ast_eval(struct ast *);

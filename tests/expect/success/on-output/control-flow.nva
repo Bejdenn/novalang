@@ -16,11 +16,29 @@ if x > 2 {
     print("Branch on else");
 }
 
+// if statements can contain more than one branch
+if x > 22 {
+    print("First branch");
+} else if x < 15 {
+    print("Second branch");
+} else {
+    print("Last branch");
+}
+
 // if expression (else branch is mandatory) 
 n := if x > y {
     111
 } else {
     222
+};
+
+// if expression may contain multiple else if branches
+n = if x > y {
+    1
+} else if x < y {
+    0 - 1 // TODO the lexer has to detect negative numbers
+} else {
+    0
 };
 
 i := 0;
