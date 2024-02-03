@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-struct symbol symtab[TBL_SIZE];
+struct symbol *symbol_table;
+int level = 0;
+
 struct fn_symbol BUILTIN_FUNCTIONS[TBL_SIZE] =
     {{.name = "print", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "s", .type = T_STR}}},
      {.name = "print_int", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "i", .type = T_INT}}},
@@ -32,41 +34,117 @@ char *lookup_value_type_name(enum value_type type)
     }
 }
 
-struct symbol *symlookup(char *s)
+struct symbol *symbol_get(char *name)
 {
     for (int i = 0; i < TBL_SIZE; i++)
     {
-        if (symtab[i].name && strcmp(symtab[i].name, s) == 0)
-            return &symtab[i];
+        if (symbol_table[i].name && strcmp(symbol_table[i].name, name) == 0)
+            return &symbol_table[i];
     }
 
     return NULL;
 }
 
-struct symbol *symadd(char *s, int type)
+void symbol_table_init()
 {
-    struct symbol *sym = symlookup(s);
+    symbol_table = malloc(sizeof(struct symbol) * TBL_SIZE);
+    for (int i = 0; i < TBL_SIZE; i++)
+    {
+        symbol_table[i].name = NULL;
+        symbol_table[i].level = level;
+    }
+}
+
+struct symbol *symbol_add(char *name, int type, union s_val *val)
+{
+    struct symbol *sym = symbol_get(name);
     if (sym)
     {
-        // if the symbol already exists, we replace its type to allow further type checks to run
+        // replace the symbol
         sym->type = type;
+        sym->val = val;
+        sym->level = level;
         return sym;
     }
 
     for (int i = 0; i < TBL_SIZE; i++)
     {
-        if (!symtab[i].name)
+        if (!symbol_table[i].name)
         {
-            symtab[i].name = strdup(s);
-            symtab[i].type = type;
-            symtab[i].val = malloc(sizeof(union s_val));
-            return &symtab[i];
+            symbol_table[i].name = strdup(name);
+            symbol_table[i].type = type;
+            symbol_table[i].level = level;
+
+            if (val)
+            {
+                *symbol_table[i].val = *val;
+            }
+            else
+            {
+                symbol_table[i].val = malloc(sizeof(union s_val));
+            }
+            return &symbol_table[i];
         }
     }
 
     /* at this point we don't have any space in the table anymore */
 
     return NULL;
+}
+
+struct symbol *symbol_table_copy()
+{
+    struct symbol *new_t = malloc(sizeof(struct symbol) * TBL_SIZE);
+    for (int i = 0; i < TBL_SIZE; i++)
+    {
+        new_t[i] = symbol_table[i];
+        if (symbol_table[i].name)
+        {
+            new_t[i].name = strdup(symbol_table[i].name);
+            new_t[i].level = level;
+            new_t[i].val = malloc(sizeof(union s_val));
+            *new_t[i].val = *symbol_table[i].val;
+            new_t[i].type = symbol_table[i].type;
+        }
+    }
+    return new_t;
+}
+
+struct symbol *nested_scope_start(struct symbol *new_t)
+{
+    struct symbol *old_t = symbol_table;
+    symbol_table = symbol_table_copy();
+    // the symbol table has to contain all symbols from the inner scope that are not shadowed
+    for (int i = 0; new_t && i < TBL_SIZE; i++)
+    {
+        if (new_t[i].name && symbol_get(new_t[i].name) == NULL)
+        {
+            symbol_add(new_t[i].name, new_t[i].type, NULL);
+        }
+    }
+
+    level++;
+    return old_t;
+}
+
+struct symbol *nested_scope_end(struct symbol *old_t)
+{
+    struct symbol *current_t = symbol_table;
+    // merge changes from the nested scope on not shadowed symbols
+    for (int i = 0; i < TBL_SIZE; i++)
+    {
+        for (int j = 0; j < TBL_SIZE; j++)
+        {
+            if (old_t[i].name && symbol_table[j].name && strcmp(old_t[i].name, symbol_table[j].name) == 0 && old_t[i].level == symbol_table[j].level)
+            {
+                old_t[i] = symbol_table[j];
+            }
+        }
+    }
+
+    level--;
+    symbol_table = old_t;
+    return current_t;
 }
 
 struct fn_symbol *fnlookup(char *s)

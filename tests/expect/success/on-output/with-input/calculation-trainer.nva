@@ -7,13 +7,13 @@ operand_2 := 5; // random_int(5, 10);
 
 op_r := 1; // random_int(0, 1);
 solution: int;
-op := if op_r == 0 {
+op := when op_r == 0 {
     solution = operand_1 + operand_2;
     "+"
-} else if op_r == 1 {
+} else when op_r == 1 {
     solution = operand_1 - operand_2;
     "-"
-} else if op_r == 2 {
+} else when op_r == 2 {
     solution = operand_1 * operand_2;
     "*"
 } else {

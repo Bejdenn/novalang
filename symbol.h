@@ -15,6 +15,7 @@ struct symbol
     char *name;
     union s_val *val;
     int type;
+    int level;
 };
 
 union s_val
@@ -32,11 +33,22 @@ struct fn_symbol
     int params_count;
 };
 
-#define TBL_SIZE 25
+#define TBL_SIZE 99
 
-extern struct symbol symtab[TBL_SIZE];
+void symbol_table_init();
+
+/// @brief The symbol table (global scope).
+extern struct symbol *symbol_table;
+
+/// @brief The current level of nested scopes.
+extern int level;
+
 extern struct fn_symbol BUILTIN_FUNCTIONS[TBL_SIZE];
 
-struct symbol *symlookup(char *);
-struct symbol *symadd(char *, int);
+struct symbol *symbol_get(char *);
+struct symbol *symbol_add(char *, int, union s_val *);
+
+struct symbol *nested_scope_start(struct symbol *);
+struct symbol *nested_scope_end(struct symbol *);
+
 struct fn_symbol *fnlookup(char *);

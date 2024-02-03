@@ -13,6 +13,7 @@ enum nodetype
     IF_EXPR,
     FOR_STMT,
     ARG_LIST,
+    BLOCK,
 };
 
 enum cmp
@@ -63,7 +64,7 @@ struct symdecl
     int nodetype;
     int lineno;
     enum value_type type;
-    struct symbol *s;
+    char *symbol;
 };
 
 struct symassign
@@ -71,7 +72,7 @@ struct symassign
     int nodetype;
     int lineno;
     enum value_type type;
-    struct symbol *s;
+    char *symbol;
     struct ast *v;
 };
 
@@ -80,7 +81,7 @@ struct symref
     int nodetype;
     int lineno;
     enum value_type type;
-    struct symbol *s;
+    char *symbol;
 };
 
 struct arglist
@@ -111,6 +112,16 @@ struct flow
     struct ast *branches;
 };
 
+struct block
+{
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct symbol *scope;
+    struct ast *stmts;
+    struct ast *expr;
+};
+
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r);
 struct ast *ast_newnode_op(char op, struct ast *l, struct ast *r);
 struct ast *ast_newnode_num(int d);
@@ -122,6 +133,7 @@ struct ast *ast_newnode_ref(char *sym_name);
 struct ast *ast_newnode_builtin(char *fn, struct ast *args);
 struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *block, struct ast *branches);
 struct ast *ast_newnode_exprblock(struct ast *stmts, struct ast *expr);
+struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol *old_t);
 
 void ast_interpret(struct ast *);
 union s_val *ast_eval(struct ast *);

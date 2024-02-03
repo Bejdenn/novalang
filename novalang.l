@@ -67,6 +67,7 @@ IDENTIFIER [a-zA-Z0-9_]+
 
 "if"   { return IF; }
 "else" { return ELSE; }
+"when" { return WHEN; }
 "for"  { return FOR; }
 
 "fn" { return FN; }

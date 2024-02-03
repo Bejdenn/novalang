@@ -3,7 +3,7 @@ n := read_int();
 steps := 0;
 print_int(n);
 for n != 1 {
-    n = if (n mod 2) == 0 {
+    n = when (n mod 2) == 0 {
         n / 2
     } else {
         n * 3 + 1

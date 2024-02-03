@@ -225,14 +225,15 @@ struct ast *ast_newnode_decl(char *sym_name, enum value_type type)
     a->type = T_VOID;
     a->lineno = yylineno;
 
-    if (symlookup(sym_name))
+    if (symbol_get(sym_name))
     {
         char str[100];
         sprintf(str, "%d: Symbol '%s' already declared\n", yylineno, sym_name);
         add_syntax_err(str);
     }
 
-    a->s = symadd(sym_name, type);
+    symbol_add(sym_name, type, NULL);
+    a->symbol = sym_name;
 
     return (struct ast *)a;
 }
@@ -243,7 +244,7 @@ struct ast *ast_newnode_assign(char *sym_name, struct ast *v)
     a->nodetype = ASSIGNMENT;
     a->type = T_VOID;
 
-    struct symbol *s = symlookup(sym_name);
+    struct symbol *s = symbol_get(sym_name);
     if (!s)
     {
         char str[100];
@@ -264,7 +265,7 @@ struct ast *ast_newnode_assign(char *sym_name, struct ast *v)
     }
 
     a->lineno = yylineno;
-    a->s = s;
+    a->symbol = s->name;
     a->v = v;
     return (struct ast *)a;
 }
@@ -274,7 +275,7 @@ struct ast *ast_newnode_ref(char *sym_name)
     struct symref *a = malloc(sizeof(struct symref));
     a->nodetype = REFERENCE;
 
-    struct symbol *s = symlookup(sym_name);
+    struct symbol *s = symbol_get(sym_name);
     if (!s)
     {
         char str[100];
@@ -286,7 +287,7 @@ struct ast *ast_newnode_ref(char *sym_name)
 
     a->type = s->type;
     a->lineno = yylineno;
-    a->s = s;
+    a->symbol = sym_name;
     return (struct ast *)a;
 }
 
@@ -365,15 +366,23 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *bl
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_exprblock(struct ast *stmts, struct ast *expr)
+struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol *old_t)
 {
-    struct ast *a = malloc(sizeof(struct ast));
-    a->nodetype = STATEMENT;
+    struct block *a = malloc(sizeof(struct block));
+    a->nodetype = BLOCK;
+
+    a->type = T_VOID;
+    if (expr != NULL)
+    {
+        a->type = expr->type;
+    }
+
     a->lineno = yylineno;
-    a->l = stmts;
-    a->r = expr;
-    a->type = expr->type;
-    return a;
+    a->stmts = stmts;
+    a->expr = expr;
+
+    a->scope = nested_scope_end(old_t);
+    return (struct ast *)a;
 }
 
 void ast_interpret(struct ast *a)
@@ -398,11 +407,22 @@ union s_val *ast_eval(struct ast *a)
     case STATEMENT:
         ast_eval(a->l);
         return ast_eval(a->r);
+    case BLOCK:
+        struct symbol *old_t = nested_scope_start(((struct block *)a)->scope);
+        if (((struct block *)a)->stmts != NULL)
+            ast_eval(((struct block *)a)->stmts);
+
+        if (((struct block *)a)->expr != NULL)
+            v = ast_eval(((struct block *)a)->expr);
+
+        nested_scope_end(old_t);
+        return v;
     case DECLARATION:
         return v;
     case ASSIGNMENT:
         struct symassign *asgn = (struct symassign *)a;
-        asgn->s->val = ast_eval(((struct symassign *)a)->v);
+        struct symbol *s = symbol_get(asgn->symbol);
+        *s->val = *ast_eval(((struct symassign *)a)->v);
         break;
     case T_INT:
         v->num = ((struct numval *)a)->number;
@@ -414,8 +434,8 @@ union s_val *ast_eval(struct ast *a)
         v->boolean = ((struct boolval *)a)->boolean;
         break;
     case REFERENCE:
-        v = ((struct symref *)a)->s->val;
-        break;
+        s = symbol_get(((struct symref *)a)->symbol);
+        return s->val;
     case '+':
     case '-':
     case '%':
@@ -504,7 +524,8 @@ union s_val *ast_eval(struct ast *a)
         else if (strcmp(bif->fn->name, "random_int") == 0)
         {
             struct timespec ts;
-            if (clock_gettime(0, &ts) == -1) {
+            if (clock_gettime(0, &ts) == -1)
+            {
                 printf("Failed to initialize rand seed\n");
                 exit(1);
             }

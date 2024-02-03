@@ -29,11 +29,14 @@
 %token <str> ID STRING BUILTIN_FN
 %token <num> NUM TYPE
 %token <boolean> BOOL
-%token IF ELSE FOR FN
+%token IF ELSE WHEN FOR FN
 
 %type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration
 %type <a> VarAssignment BuiltInFnCall IfExpression IfStatement ForStatement 
 %type <a> /* FnDeclaration ParamList FnCall */ ArgList Arg ExpressionBlock
+%type <a> StatementBlock
+
+%type <s> NestedScope
 
 %start Start
 
@@ -71,15 +74,15 @@ ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $1, $3); }
 
 Arg: Expression 
 
-IfStatement: IF Expression '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, NULL, NULL); }
-    | IF Expression '{' Statements '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, NULL); }
-    | IF Expression '{' Statements '}' ELSE '{' Statements '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, $8); }
-    | IF Expression '{' Statements '}' ELSE IfStatement { $$ = ast_newnode_flow(IF_STMT, $2, $4, $7); }
-    | IF Expression '{' Statements '}' ELSE '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, $4, NULL); }
-    | IF Expression '{' '}' ELSE '{' Statements '}' { /* Create AST node that negates condition */ }
+IfStatement: /* IF Expression '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, NULL, NULL); }
+    |*/ IF Expression StatementBlock { $$ = ast_newnode_flow(IF_STMT, $2, $3, NULL); }
+    | IF Expression StatementBlock ELSE StatementBlock { $$ = ast_newnode_flow(IF_STMT, $2, $3, $5); }
+    | IF Expression StatementBlock ELSE IfStatement { $$ = ast_newnode_flow(IF_STMT, $2, $3, $5); }
+  //| IF Expression StatementBlock ELSE '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, $3, NULL); }
+  //| IF Expression '{' '}' ELSE StatementBlock { /* Create AST node that negates condition */ }
 
-ForStatement: FOR Expression '{' '}' { $$ = ast_newnode_flow(FOR_STMT, $2, NULL, NULL);}
-    | FOR Expression '{' Statements '}' { $$ = ast_newnode_flow(FOR_STMT, $2, $4, NULL); }
+ForStatement: /* FOR Expression '{' '}' { $$ = ast_newnode_flow(FOR_STMT, $2, NULL, NULL);}
+    |*/ FOR Expression StatementBlock { $$ = ast_newnode_flow(FOR_STMT, $2, $3, NULL); }
 
 BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin($1, $3); }
     | BUILTIN_FN '(' ')' { $$ = ast_newnode_builtin($1, NULL); }
@@ -89,6 +92,8 @@ ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$
 VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl($1, $3); }
 
 VarAssignment: ID '=' Expression { $$ = ast_newnode_assign($1, $3); }
+
+StatementBlock: NestedScope '{' Statements '}' { $$ = ast_newnode_block($3, NULL, $1); }
 
 Expression: '(' Expression ')' { $$ = $2; }
     | Expression CMP Expression { $$ = ast_newnode_op($2, $1, $3); }
@@ -104,11 +109,13 @@ Expression: '(' Expression ')' { $$ = $2; }
     | BOOL { $$ = ast_newnode_bool($1); }
     | ID { $$ = ast_newnode_ref($1); }
 
-IfExpression: IF Expression ExpressionBlock ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
-    | IF Expression ExpressionBlock ELSE ExpressionBlock { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
+IfExpression: WHEN Expression ExpressionBlock ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
+    | WHEN Expression ExpressionBlock ELSE ExpressionBlock { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
 
-ExpressionBlock: '{' Statements Expression '}' { $$ = ast_newnode_exprblock($2, $3); }
-    | '{' Expression '}' { $$ = $2; }
+ExpressionBlock: NestedScope '{' Statements Expression '}' { $$ = ast_newnode_block($3, $4, $1); }
+    | NestedScope '{' Expression '}' { $$ = ast_newnode_block(NULL, $3, $1); }
+
+NestedScope: %empty { $$ = nested_scope_start(NULL); }
 %%
 
 int main(int argc, char **argv)
@@ -126,6 +133,9 @@ int main(int argc, char **argv)
 
     int success = 0;    
     yyin = f;
+
+    symbol_table_init();
+
     success = yyparse();
     fclose(f);
     return success;
