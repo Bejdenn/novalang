@@ -364,6 +364,17 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *bl
     return (struct ast *)a;
 }
 
+struct ast *ast_newnode_exprblock(struct ast *stmts, struct ast *expr)
+{
+    struct ast *a = malloc(sizeof(struct ast));
+    a->nodetype = STATEMENT;
+    a->lineno = yylineno;
+    a->l = stmts;
+    a->r = expr;
+    a->type = expr->type;
+    return a;
+}
+
 void ast_interpret(struct ast *a)
 {
     if (error_buf_ptr > 0)

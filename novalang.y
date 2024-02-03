@@ -33,7 +33,7 @@
 
 %type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration
 %type <a> VarAssignment BuiltInFnCall IfExpression IfStatement ForStatement 
-%type <a> /* FnDeclaration ParamList FnCall */ ArgList Arg
+%type <a> /* FnDeclaration ParamList FnCall */ ArgList Arg ExpressionBlock
 
 %start Start
 
@@ -104,8 +104,11 @@ Expression: '(' Expression ')' { $$ = $2; }
     | BOOL { $$ = ast_newnode_bool($1); }
     | ID { $$ = ast_newnode_ref($1); }
 
-IfExpression: IF Expression '{' Expression '}' ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $4, $7); }
-    | IF Expression '{' Expression '}' ELSE '{' Expression '}' { $$ = ast_newnode_flow(IF_EXPR, $2, $4, $8); }
+IfExpression: IF Expression ExpressionBlock ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
+    | IF Expression ExpressionBlock ELSE ExpressionBlock { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
+
+ExpressionBlock: '{' Statements Expression '}' { $$ = ast_newnode_exprblock($2, $3); }
+    | '{' Expression '}' { $$ = $2; }
 %%
 
 int main(int argc, char **argv)
