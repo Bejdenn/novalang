@@ -2,6 +2,7 @@
 #include "string.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 char *error_buf[100];
 int error_buf_ptr = 0;
@@ -502,7 +503,12 @@ union s_val *ast_eval(struct ast *a)
         }
         else if (strcmp(bif->fn->name, "random_int") == 0)
         {
-            srand(arc4random());
+            struct timespec ts;
+            if (clock_gettime(0, &ts) == -1) {
+                printf("Failed to initialize rand seed\n");
+                exit(1);
+            }
+            srand(ts.tv_nsec);
 
             int upper = ast_eval(bif->args->r)->num;
             int lower = ast_eval(bif->args->l->r)->num;
