@@ -36,7 +36,7 @@ n := if x > y {
 n = if x > y {
     1
 } else if x < y {
-    0 - 1 // TODO the lexer has to detect negative numbers
+    -1
 } else {
     0
 };

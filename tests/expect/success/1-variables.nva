@@ -9,6 +9,6 @@ boolean = true;
 string = "Hello world!";
 
 // Short hand variable declaration and assignment
-number_2 := 42;
+number_2 := -42;
 boolean_2 := false;
 string_2 := "Bye world!";

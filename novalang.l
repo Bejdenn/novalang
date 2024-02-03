@@ -14,14 +14,25 @@
 */
 
 void striplz(char *str) {
+    int negative = *yytext == '-';
+
+    if (negative) {
+        yytext++;
+    }
+
     while (strlen(yytext) > 1 && *yytext == '0') { yytext++; }
+
+    if (negative) {
+        yytext--;
+        *yytext = '-';
+    }
 }
 
 %}
 
 %x BLOCK_COMMENT
 
-INT        0*([1-9][0-9]*|0)
+INT        -?0*([1-9][0-9]*|0)
 STRING     \"[^\"]*\"
 BOOL       (true|false)
 IDENTIFIER [a-zA-Z0-9_]+
