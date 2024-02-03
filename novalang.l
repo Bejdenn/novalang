@@ -19,7 +19,7 @@ void striplz(char *str) {
     if (negative) {
         yytext++;
     }
-
+    
     while (strlen(yytext) > 1 && *yytext == '0') { yytext++; }
 
     if (negative) {
@@ -88,9 +88,10 @@ IDENTIFIER [a-zA-Z0-9_]+
     return BOOL;
 }
 
-"print" |
+"print"     |
 "print_int" |
-"read_int" { yylval.str = strdup(yytext); return BUILTIN_FN; }
+"read_int"  |
+"random_int" { yylval.str = strdup(yytext); return BUILTIN_FN; }
 
 {IDENTIFIER} { 
     yylval.str = strdup(yytext);
