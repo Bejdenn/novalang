@@ -49,12 +49,25 @@ done
 echo
 
 echo "Test: non-zero exit code"
-for f in $(find tests/expect/error -name "*.nva" -type f | sort); do
+for f in $(find tests/expect/error -maxdepth 1 -name "*.nva" -type f | sort); do
     out=$(./novalang $f 2>&1 1>/dev/null)
 
     if [ $? -ne 0 ]; then
         success $f
     else
         error $f
+    fi
+done
+
+echo
+
+echo "Test: non-zero exit code + correct output"
+for f in $(find tests/expect/error/on-output -maxdepth 1 -name "*.nva" -type f | sort); do
+    out=$(./novalang $f 2>&1 | diff ${f%.nva}.output -)
+
+    if [ $? -ne 0 ]; then
+        success $f
+    else
+        error $f $out
     fi
 done
