@@ -64,6 +64,7 @@ IDENTIFIER [a-zA-Z0-9_]+
 "flt"  { yylval.num = T_FLT;   return TYPE; }
 "bool" { yylval.num = T_BOOL;  return TYPE; }
 "str"  { yylval.num = T_STR;   return TYPE; }
+"void" { yylval.num = T_VOID;  return TYPE; }
 
 "if"   { return IF; }
 "else" { return ELSE; }
