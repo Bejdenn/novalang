@@ -2,19 +2,53 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 
-struct symbol *symbol_table;
-int level = 0;
+stack *stack_new(void)
+{
+    return calloc(1, sizeof(stack));
+}
+
+stack *stack_copy(const stack *s)
+{
+    stack *new_s = stack_new();
+    new_s->val = malloc(s->size * sizeof(*s->val));
+    new_s->size = s->size;
+    for (int i = 0; i < s->size; i++)
+    {
+        new_s->val[i] = s->val[i];
+    }
+    return new_s;
+}
+
+void stack_push(stack *s, struct symbol *elem)
+{
+    s->val = realloc(s->val, (s->size + 1) * sizeof elem);
+    s->val[s->size++] = elem;
+}
+
+struct symbol *stack_pop(stack *s)
+{
+    return s->val[--s->size];
+}
+
+int stack_is_empty(const stack *s)
+{
+    return s->size == 0;
+}
+
+struct symbol *stack_peek(const stack *s)
+{
+    if (stack_is_empty(s))
+        return NULL;
+    return s->val[s->size - 1];
+}
+
+struct symbol_table_entry *symbol_table;
+struct context context = {.level = 0, .scope = S_GLOBAL_SCOPE};
 
 struct fn_symbol *fn_table;
 
-struct fn_symbol BUILTIN_FUNCTIONS[TBL_SIZE] =
-    {{.name = "print", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "s", .type = T_STR}}},
-     {.name = "print_int", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "i", .type = T_INT}}},
-     {.name = "read_int", .return_type = T_INT, .params = 0, .params_count = 0},
-     {.name = "random_int", .return_type = T_INT, .params_count = 2, .params = (struct symbol[]){{.name = "lower", .type = T_INT}, {.name = "upper", .type = T_INT}}}};
-
+// TODO rewrite using a "map" (access static list by index)
 char *lookup_value_type_name(enum value_type type)
 {
     switch (type)
@@ -36,64 +70,61 @@ char *lookup_value_type_name(enum value_type type)
     }
 }
 
+void symbol_table_init()
+{
+    symbol_table = malloc(sizeof(struct symbol_table_entry) * TBL_SIZE);
+    for (int i = 0; i < TBL_SIZE; i++)
+    {
+        symbol_table[i].name = NULL;
+        symbol_table[i].references = stack_new();
+    }
+}
+
 struct symbol *symbol_get(char *name)
 {
     for (int i = 0; i < TBL_SIZE; i++)
-    {
         if (symbol_table[i].name && strcmp(symbol_table[i].name, name) == 0)
-            return &symbol_table[i];
-    }
+            return stack_peek(symbol_table[i].references);
 
     return NULL;
 }
 
-void symbol_table_init()
+struct symbol *symbol_add(char *name, struct symbol *s)
 {
-    symbol_table = malloc(sizeof(struct symbol) * TBL_SIZE);
-    for (int i = 0; i < TBL_SIZE; i++)
-    {
-        symbol_table[i].name = NULL;
-        symbol_table[i].level = level;
-    }
-}
+    s->level = context.level;
+    s->scope = context.scope;
 
-struct symbol *symbol_add(char *name, enum value_type type, union s_val *val)
-{
     struct symbol *sym = symbol_get(name);
     if (sym)
     {
-        // replace the symbol
-        sym->type = type;
 
-        if (val)
+        if (sym->scope == context.scope && sym->level <= context.level)
         {
-            *sym->val = *val;
+            fprintf(stderr, "redeclaration of '%s'", name);
+            exit(1);
         }
         else
         {
-            sym->val = malloc(sizeof(union s_val));
+            for (int i = 0; i < TBL_SIZE; i++)
+            {
+                if (symbol_table[i].name && (strcmp(symbol_table[i].name, name) == 0))
+                {
+                    stack_push(symbol_table[i].references, s);
+                    return symbol_get(name);
+                }
+            }
         }
-        sym->level = level;
-        return sym;
     }
-
-    for (int i = 0; i < TBL_SIZE; i++)
+    else
     {
-        if (!symbol_table[i].name)
+        for (int i = 0; i < TBL_SIZE; i++)
         {
-            symbol_table[i].name = strdup(name);
-            symbol_table[i].type = type;
-            symbol_table[i].level = level;
-
-            if (val)
+            if (!symbol_table[i].name)
             {
-                *symbol_table[i].val = *val;
+                symbol_table[i].name = strdup(name);
+                stack_push(symbol_table[i].references, s);
+                return symbol_get(name);
             }
-            else
-            {
-                symbol_table[i].val = malloc(sizeof(union s_val));
-            }
-            return &symbol_table[i];
         }
     }
 
@@ -102,67 +133,38 @@ struct symbol *symbol_add(char *name, enum value_type type, union s_val *val)
     return NULL;
 }
 
-struct symbol *symbol_table_copy()
+struct symbol_table_entry *symbol_table_copy()
 {
-    struct symbol *new_t = malloc(sizeof(struct symbol) * TBL_SIZE);
+    struct symbol_table_entry *new_t = malloc(sizeof(struct symbol_table_entry) * TBL_SIZE);
     for (int i = 0; i < TBL_SIZE; i++)
     {
-        new_t[i] = symbol_table[i];
-        if (symbol_table[i].name)
-        {
-            new_t[i].name = strdup(symbol_table[i].name);
-            new_t[i].level = level;
-            new_t[i].val = malloc(sizeof(union s_val));
-            if (symbol_table[i].val)
-            {
-                *new_t[i].val = *symbol_table[i].val;
-            }
-            else
-            {
-                new_t[i].val = malloc(sizeof(union s_val));
-            }
-            new_t[i].type = symbol_table[i].type;
-        }
+        new_t[i].name = symbol_table[i].name;
+        new_t[i].references = stack_copy(symbol_table[i].references);
     }
     return new_t;
 }
 
-struct symbol *nested_scope_start(struct symbol *new_t)
+struct symbol_table_entry *scope_start(enum scope_type scope)
 {
-    struct symbol *old_t = symbol_table;
+    struct symbol_table_entry *current_table = symbol_table;
     symbol_table = symbol_table_copy();
-    // the symbol table has to contain all symbols from the inner scope that are not shadowed
-    level++;
-    for (int i = 0; new_t && i < TBL_SIZE; i++)
+    context.level++;
+    if (scope == S_FUNCTION_SCOPE)
     {
-        // Note: the actual shadowing is done here
-        if (new_t[i].name)
-        {
-            symbol_add(new_t[i].name, new_t[i].type, NULL);
-        }
+        context.scope = S_FUNCTION_SCOPE;
     }
 
-    return old_t;
+    return current_table;
 }
 
-struct symbol *nested_scope_end(struct symbol *old_t)
+void scope_end(struct symbol_table_entry *previous_table)
 {
-    struct symbol *current_t = symbol_table;
-    // merge changes from the nested scope on not shadowed symbols
-    for (int i = 0; i < TBL_SIZE; i++)
+    context.level--;
+    symbol_table = previous_table;
+    if (context.level == 0)
     {
-        for (int j = 0; j < TBL_SIZE; j++)
-        {
-            if (old_t[i].name && symbol_table[j].name && strcmp(old_t[i].name, symbol_table[j].name) == 0 && old_t[i].level == symbol_table[j].level)
-            {
-                old_t[i] = symbol_table[j];
-            }
-        }
+        context.scope = S_GLOBAL_SCOPE;
     }
-
-    level--;
-    symbol_table = old_t;
-    return current_t;
 }
 
 struct fn_symbol *fn_get(char *s)
@@ -184,17 +186,25 @@ void fn_table_init()
         fn_table[i].name = NULL;
     }
 
-    fn_add("print", T_VOID, (struct symbol[]){{.name = "s", .type = T_STR}}, 1);
-    fn_add("print_int", T_VOID, (struct symbol[]){{.name = "i", .type = T_INT}}, 1);
-    fn_add("read_int", T_INT, 0, 0);
-    fn_add("random_int", T_INT, (struct symbol[]){{.name = "lower", .type = T_INT}, {.name = "upper", .type = T_INT}}, 2);
+    struct symbol *p = (struct symbol[]){{.type = T_STR}};
+    fn_add("print", T_VOID, &p, 1);
+
+    p = (struct symbol[]){{.type = T_INT}};
+    fn_add("print_int", T_VOID, &p, 1);
+
+    fn_add("read_int", T_INT, NULL, 0);
+
+    p = (struct symbol[]){{.type = T_INT}, {.type = T_INT}};
+    fn_add("random_int", T_INT, &p, 2);
 }
 
-struct fn_symbol *fn_add(char *name, enum value_type return_type, struct symbol *params, int params_count)
+struct fn_symbol *fn_add(char *name, enum value_type return_type, struct symbol *params[], int params_count)
 {
     struct fn_symbol *fn = fn_get(name);
     if (fn)
     {
+        // As function declarations are only permitted in the global scope, the only thing to look out for are
+        // duplicate declarations
         return NULL;
     }
 

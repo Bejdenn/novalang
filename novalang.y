@@ -22,7 +22,8 @@
     char *str;
     int num;
     int boolean;
-    struct symbol *s;
+    struct symbol_table_entry *st;
+    struct fn_symbol *fs;
     struct ast *a;
 }
 
@@ -36,7 +37,9 @@
 %type <a> FnDeclaration ParamList FnCall ArgList Arg ExpressionBlock
 %type <a> StatementBlock Param 
 
-%type <s> NestedScope
+%type <fs> FnSignature
+
+%type <st> BlockScope FnScope
 
 %start Start
 
@@ -61,18 +64,26 @@ Statement: IfStatement
     | VarAssignment ';'
     | BuiltInFnCall ';'
 
-FnDeclaration: FN NestedScope ID '(' ParamList ')' ':' TYPE '{' Statements Expression '}' { $$ = ast_newnode_ufn_decl($3, $5, $8, ast_newnode_fn_block($10, $11, $2));}
-    | FN NestedScope ID '(' ParamList ')' ':' TYPE '{' Expression '}' { $$ = ast_newnode_ufn_decl($3, $5, $8, ast_newnode_fn_block(NULL, $10, $2));}
+FnDeclaration: FN FnScope FnSignature '{' Statements Expression '}'
+                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block($5, $6, $2)); }
+    | FN FnScope FnSignature '{' Expression '}'
+                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block(NULL, $5, $2)); }
+    | FN FnScope FnSignature '{' Statements '}'
+                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block($5, NULL, $2)); }
+
+FnScope: %empty { $$ = scope_start(S_FUNCTION_SCOPE); }
+
+FnSignature: ID '(' ParamList ')' ':' TYPE { $$ = function_signature($1, $3, $6); }
 
 // we can use variable declarations in the param list because function declarations have their own scope
 ParamList: ParamList ',' Param { $$ = ast_newnode(ARG_LIST, $1, $3); }
     | Param { $$ = ast_newnode(ARG_LIST, NULL, $1); }
     | %empty { $$ = NULL; }
 
-Param: ID ':' TYPE { $$ = ast_newnode_decl($1, $3, 1); }
+Param: ID ':' TYPE { $$ = ast_newnode_decl($1, $3); }
 
-FnCall: ID '(' ArgList ')' { $$ = ast_newnode_ufn_call($1, $3); }
-    | ID '(' ')' { $$ = ast_newnode_ufn_call($1, NULL); }
+FnCall: ID '(' ArgList ')' { $$ = ast_newnode_fn_call($1, $3); }
+    | ID '(' ')' { $$ = ast_newnode_fn_call($1, NULL); }
 
 ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $1, $3); }
     | Arg { $$ = ast_newnode(ARG_LIST, NULL, $1); }
@@ -89,16 +100,16 @@ IfStatement: /* IF Expression '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, NULL,
 ForStatement: /* FOR Expression '{' '}' { $$ = ast_newnode_flow(FOR_STMT, $2, NULL, NULL);}
     |*/ FOR Expression StatementBlock { $$ = ast_newnode_flow(FOR_STMT, $2, $3, NULL); }
 
-BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin($1, $3); }
-    | BUILTIN_FN '(' ')' { $$ = ast_newnode_builtin($1, NULL); }
+BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin_fn_call($1, $3); }
+    | BUILTIN_FN '(' ')' { $$ = ast_newnode_builtin_fn_call($1, NULL); }
 
-ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN, 0); $$ = ast_newnode_assign($1, $4); }
+ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$ = ast_newnode_assign($1, $4); }
 
-VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl($1, $3, 0); }
+VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl($1, $3); }
 
 VarAssignment: ID '=' Expression { $$ = ast_newnode_assign($1, $3); }
 
-StatementBlock: NestedScope '{' Statements '}' { $$ = ast_newnode_block($3, NULL, $1); }
+StatementBlock: BlockScope '{' Statements '}' { $$ = ast_newnode_block($3, NULL, $1); }
 
 Expression: '(' Expression ')' { $$ = $2; }
     | Expression CMP Expression { $$ = ast_newnode_op($2, $1, $3); }
@@ -118,10 +129,10 @@ Expression: '(' Expression ')' { $$ = $2; }
 IfExpression: WHEN Expression ExpressionBlock ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
     | WHEN Expression ExpressionBlock ELSE ExpressionBlock { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
 
-ExpressionBlock: NestedScope '{' Statements Expression '}' { $$ = ast_newnode_block($3, $4, $1); }
-    | NestedScope '{' Expression '}' { $$ = ast_newnode_block(NULL, $3, $1); }
+ExpressionBlock: BlockScope '{' Statements Expression '}' { $$ = ast_newnode_block($3, $4, $1); }
+    | BlockScope '{' Expression '}' { $$ = ast_newnode_block(NULL, $3, $1); }
 
-NestedScope: %empty { $$ = nested_scope_start(NULL); }
+BlockScope: %empty { $$ = scope_start(S_BLOCK_SCOPE); }
 %%
 
 int main(int argc, char **argv)
