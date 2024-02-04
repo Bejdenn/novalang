@@ -33,8 +33,8 @@
 
 %type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration
 %type <a> VarAssignment BuiltInFnCall IfExpression IfStatement ForStatement 
-%type <a> /* FnDeclaration ParamList FnCall */ ArgList Arg ExpressionBlock
-%type <a> StatementBlock
+%type <a> FnDeclaration ParamList FnCall ArgList Arg ExpressionBlock
+%type <a> StatementBlock Param 
 
 %type <s> NestedScope
 
@@ -54,20 +54,25 @@ Statements: Statements Statement { $$ = ast_newnode(STATEMENT, $1, $2); }
 
 Statement: IfStatement
     | ForStatement
-//    | FnDeclaration
-//    | FnCall ';'
+    | FnDeclaration
+    | FnCall ';'
     | ShortVarDeclaration ';'
     | VarDeclaration ';'
     | VarAssignment ';'
     | BuiltInFnCall ';'
 
-// FnDeclaration: FN ID '(' ParamList ')' ':' TYPE '{' Statements '}' { }
+FnDeclaration: FN NestedScope ID '(' ParamList ')' ':' TYPE '{' Statements Expression '}' { $$ = ast_newnode_ufn_decl($3, $5, $8, ast_newnode_fn_block($10, $11, $2));}
+    | FN NestedScope ID '(' ParamList ')' ':' TYPE '{' Expression '}' { $$ = ast_newnode_ufn_decl($3, $5, $8, ast_newnode_fn_block(NULL, $10, $2));}
 
-// ParamList: ParamList ',' ID ':' TYPE { }
-//    | ID ':' TYPE { }
-//    | %empty { }
+// we can use variable declarations in the param list because function declarations have their own scope
+ParamList: ParamList ',' Param { $$ = ast_newnode(ARG_LIST, $1, $3); }
+    | Param { $$ = ast_newnode(ARG_LIST, NULL, $1); }
+    | %empty { $$ = NULL; }
 
-// FnCall: ID '(' ArgList ')' {  }
+Param: ID ':' TYPE { $$ = ast_newnode_decl($1, $3, 1); }
+
+FnCall: ID '(' ArgList ')' { $$ = ast_newnode_ufn_call($1, $3); }
+    | ID '(' ')' { $$ = ast_newnode_ufn_call($1, NULL); }
 
 ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $1, $3); }
     | Arg { $$ = ast_newnode(ARG_LIST, NULL, $1); }
@@ -87,9 +92,9 @@ ForStatement: /* FOR Expression '{' '}' { $$ = ast_newnode_flow(FOR_STMT, $2, NU
 BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin($1, $3); }
     | BUILTIN_FN '(' ')' { $$ = ast_newnode_builtin($1, NULL); }
 
-ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$ = ast_newnode_assign($1, $4); }
+ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN, 0); $$ = ast_newnode_assign($1, $4); }
 
-VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl($1, $3); }
+VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl($1, $3, 0); }
 
 VarAssignment: ID '=' Expression { $$ = ast_newnode_assign($1, $3); }
 
@@ -104,6 +109,7 @@ Expression: '(' Expression ')' { $$ = $2; }
     | Expression '-' Expression { $$ = ast_newnode_op('-', $1, $3); }
     | IfExpression
     | BuiltInFnCall
+    | FnCall
     | NUM { $$ = ast_newnode_num($1); }
     | STRING { $$ = ast_newnode_str($1); }
     | BOOL { $$ = ast_newnode_bool($1); }
@@ -135,6 +141,7 @@ int main(int argc, char **argv)
     yyin = f;
 
     symbol_table_init();
+    fn_table_init();
 
     success = yyparse();
     fclose(f);

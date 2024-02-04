@@ -7,6 +7,40 @@
 char *error_buf[100];
 int error_buf_ptr = 0;
 
+struct routine
+{
+    char *fn_name;
+    struct ast *block;
+};
+
+// These are the function bodies that are user defined
+// We define them here (instead of in the function table) because we need to keep the AST node
+struct routine routines[100];
+
+struct routine *routine_get(char *fn_name)
+{
+    for (int i = 0; i < 100; i++)
+    {
+        if (routines[i].fn_name && strcmp(routines[i].fn_name, fn_name) == 0)
+            return &routines[i];
+    }
+
+    return NULL;
+}
+
+void routine_add(char *fn_name, struct ast *block)
+{
+    for (int i = 0; i < 100; i++)
+    {
+        if (!routines[i].fn_name)
+        {
+            routines[i].fn_name = fn_name;
+            routines[i].block = block;
+            return;
+        }
+    }
+}
+
 void add_syntax_err(char *err)
 {
     error_buf[error_buf_ptr++] = strdup(err);
@@ -218,18 +252,25 @@ struct ast *ast_newnode_bool(int b)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_decl(char *sym_name, enum value_type type)
+struct ast *ast_newnode_decl(char *sym_name, enum value_type type, int shadow_symbols)
 {
     struct symdecl *a = malloc(sizeof(struct symdecl));
     a->nodetype = DECLARATION;
     a->type = T_VOID;
     a->lineno = yylineno;
 
-    if (symbol_get(sym_name))
+    if (!shadow_symbols && symbol_get(sym_name))
     {
         char str[100];
         sprintf(str, "%d: Symbol '%s' already declared\n", yylineno, sym_name);
         add_syntax_err(str);
+    }
+
+    // we can assume that the declaration is used for parameters, when the flag for shadowing is set
+    // in this case, we emit the type of the parameter
+    if (shadow_symbols)
+    {
+        a->type = type;
     }
 
     symbol_add(sym_name, type, NULL);
@@ -291,25 +332,24 @@ struct ast *ast_newnode_ref(char *sym_name)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_builtin(char *fn, struct ast *args)
+struct ast *ast_newnode_builtin(char *fn_name, struct ast *args)
 {
     struct builtInFn *a = malloc(sizeof(struct builtInFn));
     a->nodetype = BUILTIN;
 
-    struct fn_symbol *builtin_fn = fnlookup(fn);
-
-    if (!builtin_fn)
+    struct fn_symbol *fn = fn_get(fn_name);
+    if (!fn)
     {
         char s[100];
-        sprintf(s, "%d: Unknown function '%s'\n", yylineno, fn);
+        sprintf(s, "%d: Unknown function '%s'\n", yylineno, fn_name);
         add_syntax_err(s);
         a->type = T_UNKNOWN;
         return (struct ast *)a;
     }
 
-    a->type = builtin_fn->return_type;
+    a->type = fn->return_type;
     a->lineno = yylineno;
-    a->fn = builtin_fn;
+    a->fn_name = fn->name;
 
     int nargs = 0;
     for (struct ast *arg = args; arg != NULL; arg = arg->l)
@@ -317,16 +357,17 @@ struct ast *ast_newnode_builtin(char *fn, struct ast *args)
         nargs++;
     }
 
-    if (nargs != builtin_fn->params_count)
+    if (nargs != fn->params_count)
     {
         char s[100];
-        sprintf(s, "%d: Function '%s' expects %d arguments, but was given %d\n", yylineno, builtin_fn->name, builtin_fn->params_count, nargs);
+        sprintf(s, "%d: Function '%s' expects %d arguments, but was given %d\n", yylineno, fn->name, fn->params_count, nargs);
         add_syntax_err(s);
     }
+    a->args_count = nargs;
 
-    for (struct ast *arg = args; arg != NULL && builtin_fn->params != NULL; arg = arg->l)
+    for (struct ast *arg = args; arg != NULL && fn->params != NULL; arg = arg->l)
     {
-        struct symbol param = builtin_fn->params[nargs - 1];
+        struct symbol param = fn->params[nargs - 1];
         if (arg->r->type != param.type)
         {
             char s[100];
@@ -338,6 +379,13 @@ struct ast *ast_newnode_builtin(char *fn, struct ast *args)
 
     a->args = args;
     return (struct ast *)a;
+}
+
+struct ast *ast_newnode_ufn_call(char *fn_name, struct ast *args)
+{
+    struct ast *a = ast_newnode_builtin(fn_name, args);
+    a->nodetype = USER_FUNCTION;
+    return a;
 }
 
 struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *block, struct ast *branches)
@@ -383,6 +431,56 @@ struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol
 
     a->scope = nested_scope_end(old_t);
     return (struct ast *)a;
+}
+
+struct ast *ast_newnode_fn_block(struct ast *stmts, struct ast *expr, struct symbol *old_t)
+{
+    struct block *a = (struct block *)ast_newnode_block(stmts, expr, old_t);
+    a->nodetype = FN_BLOCK;
+    return (struct ast *)a;
+}
+
+struct ast *ast_newnode_ufn_decl(char *fn_name, struct ast *params, enum value_type type, struct ast *block)
+{
+    struct fn_symbol *fn = fn_get(fn_name);
+    if (fn)
+    {
+        char s[100];
+        sprintf(s, "%d: Function '%s' already declared\n", yylineno, fn_name);
+        add_syntax_err(s);
+        return NULL;
+    }
+
+    if (block != NULL && block->type != type)
+    {
+        char s[100];
+        sprintf(s, "%d: Function '%s' return type must be '%s', but was '%s'\n", yylineno, fn_name, lookup_value_type_name(type), lookup_value_type_name(block->type));
+        add_syntax_err(s);
+    }
+
+    int params_count = 0;
+    for (struct ast *param = params; param != NULL; param = param->l)
+    {
+        params_count++;
+    }
+
+    struct symbol *params_list = malloc(sizeof(struct symbol) * params_count);
+    int pc = params_count;
+    for (struct ast *param = params; param != NULL; param = param->l)
+    {
+        struct symdecl *p = ((struct symdecl *)param->r);
+        params_list[pc - 1] = (struct symbol){.name = p->symbol, .type = p->type};
+        pc--;
+    }
+
+    fn_add(fn_name, type, params_list, params_count);
+    routine_add(fn_name, block);
+
+    struct ast *a = malloc(sizeof(struct ast));
+    a->nodetype = DECLARATION;
+    a->lineno = yylineno;
+    a->type = T_VOID;
+    return a;
 }
 
 void ast_interpret(struct ast *a)
@@ -498,17 +596,18 @@ union s_val *ast_eval(struct ast *a)
         break;
     case BUILTIN:
         struct builtInFn *bif = ((struct builtInFn *)a);
-        if (strcmp(bif->fn->name, "print") == 0)
+        if (strcmp(bif->fn_name, "print") == 0)
         {
-            printf("%s\n", ast_eval(bif->args->r)->str);
+            v = ast_eval(bif->args->r);
+            printf("%s\n", v->str);
             break;
         }
-        else if (strcmp(bif->fn->name, "print_int") == 0)
+        else if (strcmp(bif->fn_name, "print_int") == 0)
         {
             printf("%d\n", ast_eval(bif->args->r)->num);
             break;
         }
-        else if (strcmp(bif->fn->name, "read_int") == 0)
+        else if (strcmp(bif->fn_name, "read_int") == 0)
         {
             char line[128] = {0};
             if (fgets(line, sizeof(line), stdin))
@@ -521,7 +620,7 @@ union s_val *ast_eval(struct ast *a)
             }
             break;
         }
-        else if (strcmp(bif->fn->name, "random_int") == 0)
+        else if (strcmp(bif->fn_name, "random_int") == 0)
         {
             struct timespec ts;
             if (clock_gettime(0, &ts) == -1)
@@ -540,9 +639,38 @@ union s_val *ast_eval(struct ast *a)
         else
         {
             // normally this is checked when type checking, but who knows
-            printf("Unknown built-in function: %s\n", bif->fn->name);
+            printf("Unknown built-in function: %s\n", bif->fn_name);
             exit(1);
         }
+        break;
+    case USER_FUNCTION:
+        struct builtInFn *ufn = (struct builtInFn *)a;
+        struct fn_symbol *fn = fn_get(ufn->fn_name);
+        struct routine *r = routine_get(ufn->fn_name);
+
+        old_t = nested_scope_start(((struct block *)r->block)->scope);
+
+        int param_count = fn->params_count;
+        for (struct ast *arg = ufn->args; arg != NULL && fn->params != NULL; arg = arg->l)
+        {
+            struct symbol param = fn->params[fn->params_count - 1];
+            symbol_get(param.name)->val = ast_eval(arg->r);
+            param_count--;
+        }
+
+        if (r != NULL)
+        {
+            v = ast_eval(r->block);
+        }
+
+        ((struct block *)r->block)->scope = nested_scope_end(old_t);
+        break;
+    case FN_BLOCK:
+        if (((struct block *)a)->stmts != NULL)
+            ast_eval(((struct block *)a)->stmts);
+
+        if (((struct block *)a)->expr != NULL)
+            v = ast_eval(((struct block *)a)->expr);
         break;
     case ARG_LIST:
         return ast_eval(a->l);

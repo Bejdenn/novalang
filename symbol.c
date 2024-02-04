@@ -7,6 +7,8 @@
 struct symbol *symbol_table;
 int level = 0;
 
+struct fn_symbol *fn_table;
+
 struct fn_symbol BUILTIN_FUNCTIONS[TBL_SIZE] =
     {{.name = "print", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "s", .type = T_STR}}},
      {.name = "print_int", .return_type = T_VOID, .params_count = 1, .params = (struct symbol[]){{.name = "i", .type = T_INT}}},
@@ -55,14 +57,22 @@ void symbol_table_init()
     }
 }
 
-struct symbol *symbol_add(char *name, int type, union s_val *val)
+struct symbol *symbol_add(char *name, enum value_type type, union s_val *val)
 {
     struct symbol *sym = symbol_get(name);
     if (sym)
     {
         // replace the symbol
         sym->type = type;
-        sym->val = val;
+
+        if (val)
+        {
+            *sym->val = *val;
+        }
+        else
+        {
+            sym->val = malloc(sizeof(union s_val));
+        }
         sym->level = level;
         return sym;
     }
@@ -103,7 +113,14 @@ struct symbol *symbol_table_copy()
             new_t[i].name = strdup(symbol_table[i].name);
             new_t[i].level = level;
             new_t[i].val = malloc(sizeof(union s_val));
-            *new_t[i].val = *symbol_table[i].val;
+            if (symbol_table[i].val)
+            {
+                *new_t[i].val = *symbol_table[i].val;
+            }
+            else
+            {
+                new_t[i].val = malloc(sizeof(union s_val));
+            }
             new_t[i].type = symbol_table[i].type;
         }
     }
@@ -115,15 +132,16 @@ struct symbol *nested_scope_start(struct symbol *new_t)
     struct symbol *old_t = symbol_table;
     symbol_table = symbol_table_copy();
     // the symbol table has to contain all symbols from the inner scope that are not shadowed
+    level++;
     for (int i = 0; new_t && i < TBL_SIZE; i++)
     {
-        if (new_t[i].name && symbol_get(new_t[i].name) == NULL)
+        // Note: the actual shadowing is done here
+        if (new_t[i].name)
         {
             symbol_add(new_t[i].name, new_t[i].type, NULL);
         }
     }
 
-    level++;
     return old_t;
 }
 
@@ -147,12 +165,58 @@ struct symbol *nested_scope_end(struct symbol *old_t)
     return current_t;
 }
 
-struct fn_symbol *fnlookup(char *s)
+struct fn_symbol *fn_get(char *s)
 {
     for (int i = 0; i < TBL_SIZE; i++)
     {
-        if (BUILTIN_FUNCTIONS[i].name && strcmp(BUILTIN_FUNCTIONS[i].name, s) == 0)
-            return &BUILTIN_FUNCTIONS[i];
+        if (fn_table[i].name && strcmp(fn_table[i].name, s) == 0)
+            return &fn_table[i];
+    }
+
+    return NULL;
+}
+
+void fn_table_init()
+{
+    fn_table = malloc(sizeof(struct fn_symbol) * TBL_SIZE);
+    for (int i = 0; i < TBL_SIZE; i++)
+    {
+        fn_table[i].name = NULL;
+    }
+
+    fn_add("print", T_VOID, (struct symbol[]){{.name = "s", .type = T_STR}}, 1);
+    fn_add("print_int", T_VOID, (struct symbol[]){{.name = "i", .type = T_INT}}, 1);
+    fn_add("read_int", T_INT, 0, 0);
+    fn_add("random_int", T_INT, (struct symbol[]){{.name = "lower", .type = T_INT}, {.name = "upper", .type = T_INT}}, 2);
+}
+
+struct fn_symbol *fn_add(char *name, enum value_type return_type, struct symbol *params, int params_count)
+{
+    struct fn_symbol *fn = fn_get(name);
+    if (fn)
+    {
+        return NULL;
+    }
+
+    for (int i = 0; i < TBL_SIZE; i++)
+    {
+        if (!fn_table[i].name)
+        {
+            fn_table[i].name = strdup(name);
+            fn_table[i].return_type = return_type;
+
+            if (params)
+            {
+                fn_table[i].params = malloc(sizeof(struct symbol) * params_count);
+                for (int j = 0; j < params_count; j++)
+                {
+                    fn_table[i].params[j] = params[j];
+                }
+            }
+
+            fn_table[i].params_count = params_count;
+            return &fn_table[i];
+        }
     }
 
     return NULL;

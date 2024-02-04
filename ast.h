@@ -14,11 +14,13 @@ enum nodetype
     FOR_STMT,
     ARG_LIST,
     BLOCK,
+    USER_FUNCTION,
+    FN_BLOCK
 };
 
 enum cmp
 {
-    EQ = 10,
+    EQ = 12,
     GRT,
     LESS,
     GRT_OR_EQ,
@@ -98,8 +100,9 @@ struct builtInFn
     int nodetype;
     int lineno;
     enum value_type type;
-    struct fn_symbol *fn;
+    char *fn_name;
     struct ast *args;
+    int args_count;
 };
 
 struct flow
@@ -127,13 +130,18 @@ struct ast *ast_newnode_op(char op, struct ast *l, struct ast *r);
 struct ast *ast_newnode_num(int d);
 struct ast *ast_newnode_str(char *s);
 struct ast *ast_newnode_bool(int b);
-struct ast *ast_newnode_decl(char *sym_name, enum value_type type);
+struct ast *ast_newnode_decl(char *sym_name, enum value_type type, int shadow_symbols);
 struct ast *ast_newnode_assign(char *sym_name, struct ast *v);
 struct ast *ast_newnode_ref(char *sym_name);
 struct ast *ast_newnode_builtin(char *fn, struct ast *args);
 struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *block, struct ast *branches);
 struct ast *ast_newnode_exprblock(struct ast *stmts, struct ast *expr);
 struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol *old_t);
+struct ast *ast_newnode_fn_block(struct ast *stmts, struct ast *expr, struct symbol *old_t);
+
+struct ast *ast_newnode_ufn_decl(char *fn_name, struct ast *params, enum value_type type, struct ast *block);
+struct ast *ast_newnode_ufn_call(char *fn_name, struct ast *args);
+
 
 void ast_interpret(struct ast *);
 union s_val *ast_eval(struct ast *);

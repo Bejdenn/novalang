@@ -1,13 +1,19 @@
-fn read_line(): int {
+x := 4;
+
+fn read_line_2(x: str): str {
+    "read_line_2 " + x
+}
+
+fn read_line(x: str): str {
     print("Function declaration with no arguments");
+    "read_line " + read_line_2("Hallo, Welt!")
 }
 
-fn random_number(up: int): int {
-    print("Function declaration with a single argument");
-}
+//fn max(x: int, y: int): int {
+//    print("Function declaration with more than one argument");
+//}
 
-fn max(x: int, y: int): int {
-    print("Function declaration with more than one argument");
-}
+//i := max(2, 2);
+print(read_line("999"));
 
-i := max(x = 2, y = 2);
+print_int(x);
