@@ -97,8 +97,9 @@ struct symbol *symbol_add(char *name, struct symbol *s)
     struct symbol *sym = symbol_get(name);
     if (sym)
     {
-
-        if (sym->scope == context.scope && sym->level <= context.level)
+        // local variable can be redeclared (e.g. this is used for the pipe operator)
+        int local = sym->scope == S_LOCAL_SCOPE && context.scope == S_LOCAL_SCOPE;
+        if (!local && sym->scope == context.scope && sym->level <= context.level)
         {
             fprintf(stderr, "redeclaration of '%s'", name);
             exit(1);
@@ -149,9 +150,15 @@ struct symbol_table_entry *scope_start(enum scope_type scope)
     struct symbol_table_entry *current_table = symbol_table;
     symbol_table = symbol_table_copy();
     context.level++;
+
+    // this is a bit too defensive, but this way we can protect from unexpected scope changes
     if (scope == S_FUNCTION_SCOPE)
     {
         context.scope = S_FUNCTION_SCOPE;
+    }
+    else if (scope == S_LOCAL_SCOPE)
+    {
+        context.scope = S_LOCAL_SCOPE;
     }
 
     return current_table;

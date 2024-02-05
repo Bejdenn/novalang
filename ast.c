@@ -474,6 +474,18 @@ struct fn_symbol *function_signature(char *fn_name, struct ast *params, enum val
     return fn_add(fn_name, type, params_list, params_count);
 }
 
+struct ast *ast_newnode_pipe(struct ast *l, struct ast *r)
+{
+    struct ast *a = malloc(sizeof(struct ast));
+    a->nodetype = STATEMENT; // Statement because we just have to evaluate a tree of statements and expressions
+    a->lineno = yylineno;
+    a->l = l;
+    a->r = r;
+
+    a->type = r->type;
+    return a;
+}
+
 void ast_interpret(struct ast *a)
 {
     if (error_buf_ptr > 0)
@@ -505,7 +517,6 @@ union s_val *ast_eval(struct ast *a)
 
         break;
     case DECLARATION:
-        //((struct symdecl *) a)->symbol->val = malloc(sizeof(union s_val));
         return v;
     case ASSIGNMENT:
         ((struct symassign *)a)->symbol->val = ast_eval(((struct symassign *)a)->v);

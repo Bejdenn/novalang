@@ -17,7 +17,8 @@ enum scope_type
 {
     S_GLOBAL_SCOPE,
     S_FUNCTION_SCOPE,
-    S_BLOCK_SCOPE
+    S_BLOCK_SCOPE,
+    S_LOCAL_SCOPE
 };
 
 struct symbol
