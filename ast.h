@@ -160,7 +160,7 @@ struct block
     int nodetype;
     int lineno;
     enum value_type type;
-    struct symbol *scope;
+    struct symbol_table_entry *scope;
     struct ast *stmts;
     struct ast *expr;
 };
@@ -197,7 +197,7 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *bl
 
 struct ast *ast_newnode_exprblock(struct ast *stmts, struct ast *expr);
 
-struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *scope);
+struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *scope, enum scope_type scope_to_exit);
 
 struct fn_symbol *function_signature(char *fn_name, struct ast *params, enum value_type type);
 

@@ -44,7 +44,7 @@ struct symbol *stack_peek(const stack *s)
 }
 
 struct symbol_table_entry *symbol_table;
-struct context context = {.level = 0, .scope = S_GLOBAL_SCOPE};
+struct context context = {.level = 0, .scope = S_GLOBAL_SCOPE, .index = 0};
 
 struct fn_symbol *fn_table;
 
@@ -106,8 +106,10 @@ struct symbol *symbol_add(char *name, struct symbol *s)
     if (sym)
     {
         // local variable can be redeclared (e.g. this is used for the pipe operator)
-        int local = sym->scope == S_LOCAL_SCOPE && context.scope == S_LOCAL_SCOPE;
-        if (!local && sym->scope == context.scope && sym->level <= context.level)
+        int local = (sym->scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE && (context.scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE;
+        int can_be_shadowed = (sym->scope & S_GLOBAL_SCOPE) == S_GLOBAL_SCOPE && (context.scope & S_FUNCTION_SCOPE) == S_FUNCTION_SCOPE;
+
+        if (!local && !can_be_shadowed && sym->level <= context.level && sym->index == context.index)
         {
             fprintf(stderr, "redeclaration of '%s'", name);
             exit(1);
@@ -156,30 +158,28 @@ struct symbol_table_entry *symbol_table_copy()
 struct symbol_table_entry *scope_start(enum scope_type scope)
 {
     struct symbol_table_entry *current_table = symbol_table;
-    symbol_table = symbol_table_copy();
-    context.level++;
-
-    // this is a bit too defensive, but this way we can protect from unexpected scope changes
     if (scope == S_FUNCTION_SCOPE)
     {
-        context.scope = S_FUNCTION_SCOPE;
+        symbol_table = symbol_table_copy();
     }
-    else if (scope == S_LOCAL_SCOPE)
-    {
-        context.scope = S_LOCAL_SCOPE;
-    }
+    context.level++;
+    context.index++;
+
+    context.scope |= scope;
 
     return current_table;
 }
 
-void scope_end(struct symbol_table_entry *previous_table)
+struct symbol_table_entry *scope_end(enum scope_type type, struct symbol_table_entry *previous_table)
 {
     context.level--;
-    symbol_table = previous_table;
-    if (context.level == 0)
+    struct symbol_table_entry *current_table = symbol_table;
+    if (type == S_FUNCTION_SCOPE)
     {
-        context.scope = S_GLOBAL_SCOPE;
+        symbol_table = previous_table;
     }
+    context.scope ^= type;
+    return current_table;
 }
 
 struct fn_symbol *fn_get(char *s)

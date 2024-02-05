@@ -488,7 +488,7 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *bl
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *prev_scope)
+struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *prev_scope, enum scope_type scope_to_exit)
 {
     struct block *a = malloc(sizeof(struct block));
     a->nodetype = BLOCK;
@@ -503,7 +503,7 @@ struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol
     a->stmts = stmts;
     a->expr = expr;
 
-    scope_end(prev_scope);
+    a->scope = scope_end(scope_to_exit, prev_scope);
 
     return (struct ast *)a;
 }
@@ -811,9 +811,75 @@ union s_val *ast_eval(struct ast *a)
             params_count--;
         }
 
+        union s_val **symbol_buf[TBL_SIZE];
+        for (int i = 0; i < TBL_SIZE; i++)
+        {
+            int stack_size = ((struct block *)r->block)->scope[i].references->size;
+            symbol_buf[i] = malloc(sizeof(union s_val *) * stack_size);
+            for (int j = 0; j < stack_size; j++)
+            {
+                struct symbol *current_s = ((struct block *)r->block)->scope[i].references->val[j];
+                int is_param = 0;
+                for (int k = 0; k < call->fn->params_count; k++)
+                {
+                    if (call->fn->params[k] == current_s)
+                    {
+                        is_param = 1;
+                        break;
+                    }
+                }
+
+                if (is_param)
+                {
+                    continue;
+                }
+
+                // skip global values
+                if (current_s->scope == S_GLOBAL_SCOPE)
+                {
+                    continue;
+                }
+
+                symbol_buf[i][j] = current_s->val;
+                current_s->val = malloc(sizeof(union s_val));
+            }
+        }
+
         if (r != NULL)
         {
             v = ast_eval(r->block);
+        }
+
+        // restore the symbol table
+        for (int i = 0; i < TBL_SIZE; i++)
+        {
+            int stack_size = ((struct block *)r->block)->scope[i].references->size;
+            for (int j = 0; j < stack_size; j++)
+            {
+                struct symbol *current_s = ((struct block *)r->block)->scope[i].references->val[j];
+
+                int is_param = 0;
+                for (int k = 0; k < call->fn->params_count; k++)
+                {
+                    if (call->fn->params[k] == current_s)
+                    {
+                        is_param = 1;
+                        break;
+                    }
+                }
+
+                if (is_param)
+                {
+                    continue;
+                }
+
+                if (current_s->scope == S_GLOBAL_SCOPE)
+                {
+                    continue;
+                }
+
+                current_s->val = symbol_buf[i][j];
+            }
         }
 
         params_count = call->fn->params_count;

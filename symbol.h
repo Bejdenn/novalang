@@ -16,15 +16,16 @@ enum value_type
 
 enum scope_type
 {
-    S_GLOBAL_SCOPE,
-    S_FUNCTION_SCOPE,
-    S_BLOCK_SCOPE,
-    S_LOCAL_SCOPE
+    S_GLOBAL_SCOPE = 1<<1,
+    S_FUNCTION_SCOPE = 1<<2,
+    S_BLOCK_SCOPE = 1<<3,
+    S_LOCAL_SCOPE = 1<<4
 };
 
 struct symbol
 {
     int level;
+    int index;
     enum scope_type scope;
     enum value_type type;
     union s_val *val;
@@ -35,6 +36,12 @@ typedef struct
     struct symbol **val;
     int size;
 } stack;
+
+stack *stack_new(void);
+
+int stack_is_empty(const stack *s);
+
+struct symbol *stack_peek(const stack *s);
 
 char *lookup_value_type_name(int type);
 
@@ -68,6 +75,7 @@ struct context
 {
     int level;
     enum scope_type scope;
+    int index;
 };
 
 struct symbol *symbol_get(char *name);
@@ -76,7 +84,7 @@ struct symbol *symbol_add(char *name, struct symbol *s);
 
 struct symbol_table_entry *scope_start(enum scope_type scope);
 
-void scope_end(struct symbol_table_entry *previous_table);
+struct symbol_table_entry *scope_end(enum scope_type scope, struct symbol_table_entry *previous_table);
 
 extern struct fn_symbol *fn_table;
 

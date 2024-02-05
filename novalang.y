@@ -67,11 +67,11 @@ Statement: IfStatement
     | BuiltInFnCall ';'
 
 FnDeclaration: FN FnScope FnSignature '{' Statements Expression '}'
-                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block($5, $6, $2)); }
+                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block($5, $6, $2, S_FUNCTION_SCOPE)); }
     | FN FnScope FnSignature '{' Expression '}'
-                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block(NULL, $5, $2)); }
+                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block(NULL, $5, $2, S_FUNCTION_SCOPE)); }
     | FN FnScope FnSignature '{' Statements '}'
-                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block($5, NULL, $2)); }
+                    { $$ = ast_newnode_fn_decl($3, ast_newnode_block($5, NULL, $2, S_FUNCTION_SCOPE)); }
 
 FnScope: %empty { $$ = scope_start(S_FUNCTION_SCOPE); }
 
@@ -115,7 +115,7 @@ VarAssignment: ID '=' Expression { $$ = ast_newnode_assign($1, $3); }
 Type: TYPE
     | TYPE '[' ']' { $$ = $1 | T_ARRAY; }
 
-StatementBlock: BlockScope '{' Statements '}' { $$ = ast_newnode_block($3, NULL, $1); }
+StatementBlock: BlockScope '{' Statements '}' { $$ = ast_newnode_block($3, NULL, $1, S_BLOCK_SCOPE); }
 
 Expression: SimpleExpression
     | Pipe
@@ -138,16 +138,16 @@ SimpleExpression: '(' Expression ')' { $$ = $2; }
     | '[' ArgList ']' { $$ = ast_newnode_array($2); }
     | '[' ']' { $$ = ast_newnode_array(NULL); }
 
-Pipe: SimpleExpression PIPE  { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_decl("it", ($1->type)); } { $<a>$ = ast_newnode_assign("it", $1); } PipeBody { $$ = ast_newnode_pipe($<a>4, $5); scope_end($<st>3); }
+Pipe: SimpleExpression PIPE  { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_decl("it", ($1->type)); } { $<a>$ = ast_newnode_assign("it", $1); } PipeBody { $$ = ast_newnode_pipe($<a>4, $5); scope_end(S_LOCAL_SCOPE, $<st>3); }
 
-PipeBody: SimpleExpression { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_decl("it", ($1->type)); } { $<a>$ = ast_newnode_assign("it", $1); } PIPE PipeBody { $$ = ast_newnode_pipe($<a>3, $5); scope_end($<st>2); }
+PipeBody: SimpleExpression { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_decl("it", ($1->type)); } { $<a>$ = ast_newnode_assign("it", $1); } PIPE PipeBody { $$ = ast_newnode_pipe($<a>3, $5); scope_end(S_LOCAL_SCOPE, $<st>2); }
     | SimpleExpression
 
 IfExpression: WHEN Expression ExpressionBlock ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
     | WHEN Expression ExpressionBlock ELSE ExpressionBlock { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
 
-ExpressionBlock: BlockScope '{' Statements Expression '}' { $$ = ast_newnode_block($3, $4, $1); }
-    | BlockScope '{' Expression '}' { $$ = ast_newnode_block(NULL, $3, $1); }
+ExpressionBlock: BlockScope '{' Statements Expression '}' { $$ = ast_newnode_block($3, $4, $1, S_BLOCK_SCOPE); }
+    | BlockScope '{' Expression '}' { $$ = ast_newnode_block(NULL, $3, $1, S_BLOCK_SCOPE); }
 
 BlockScope: %empty { $$ = scope_start(S_BLOCK_SCOPE); }
 %%
