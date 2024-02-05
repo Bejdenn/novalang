@@ -603,7 +603,7 @@ union s_val *ast_eval(struct ast *a)
     case DECLARATION:
         return v;
     case ASSIGNMENT:
-        ((struct symassign *)a)->symbol->val = ast_eval(((struct symassign *)a)->v);
+        *((struct symassign *)a)->symbol->val = *ast_eval(((struct symassign *)a)->v);
         break;
     case INDEX_ASSIGNMENT:
     {
