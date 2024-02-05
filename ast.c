@@ -771,7 +771,8 @@ union s_val *ast_eval(struct ast *a)
         for (struct ast *arg = call->args; arg != NULL && call->fn->params != NULL; arg = arg->l)
         {
             params_buf[params_count - 1] = call->fn->params[params_count - 1]->val;
-            call->fn->params[call->fn->params_count - 1]->val = ast_eval(arg->r);
+            union s_val *val = ast_eval(arg->r);
+            call->fn->params[params_count - 1]->val = val;
             params_count--;
         }
 
