@@ -42,21 +42,21 @@ void do_arithm_op(union s_val *, int, struct ast *);
 
 void do_cmp(union s_val *, int, struct ast *);
 
-enum value_type op_get_type(int, char, struct ast *, struct ast *);
+enum value_type op_get_type(int, enum op, struct ast *, struct ast *);
 
 char *lookup_op(int op)
 {
     switch (op)
     {
-    case '+':
+    case ADD:
         return "+";
-    case '-':
+    case MINUS:
         return "-";
-    case '%':
+    case MOD:
         return "%";
-    case '*':
+    case MUL:
         return "*";
-    case '/':
+    case DIV:
         return "/";
     case EQ:
         return "==";
@@ -111,11 +111,11 @@ char *str_concat(char *s1, char *s2)
     return s;
 }
 
-enum value_type op_get_type(int lineno, char op, struct ast *l, struct ast *r)
+enum value_type op_get_type(int lineno, enum op op, struct ast *l, struct ast *r)
 {
     switch (op)
     {
-    case '+':
+    case ADD:
         switch (l->type)
         {
         case T_INT:
@@ -155,10 +155,10 @@ enum value_type op_get_type(int lineno, char op, struct ast *l, struct ast *r)
             break;
         }
         break;
-    case '-':
-    case '%':
-    case '*':
-    case '/':
+    case MINUS:
+    case MOD:
+    case MUL:
+    case DIV:
         if (l->type == T_INT && r->type == T_INT)
         {
             return T_INT;
@@ -203,7 +203,7 @@ struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r)
     return a;
 }
 
-struct ast *ast_newnode_op(char op, struct ast *l, struct ast *r)
+struct ast *ast_newnode_op(enum op op, struct ast *l, struct ast *r)
 {
     struct ast *a = malloc(sizeof(struct ast));
 
@@ -532,11 +532,11 @@ union s_val *ast_eval(struct ast *a)
         break;
     case REFERENCE:
         return ((struct symref *)a)->symbol->val;
-    case '+':
-    case '-':
-    case '%':
-    case '*':
-    case '/':
+    case ADD:
+    case MINUS:
+    case MOD:
+    case MUL:
+    case DIV:
         do_arithm_op(v, a->nodetype, a);
         break;
     case EQ:
@@ -690,7 +690,7 @@ void do_arithm_op(union s_val *v, int op, struct ast *a)
 
     switch (op)
     {
-    case '+':
+    case ADD:
         switch (a->l->type)
         {
         case T_INT:
@@ -726,16 +726,16 @@ void do_arithm_op(union s_val *v, int op, struct ast *a)
             break;
         }
         break;
-    case '-':
+    case MINUS:
         v->num = l_val->num - r_val->num;
         break;
-    case '%':
+    case MOD:
         v->num = l_val->num % r_val->num;
         break;
-    case '*':
+    case MUL:
         v->num = l_val->num * r_val->num;
         break;
-    case '/':
+    case DIV:
         v->num = l_val->num / r_val->num;
         break;
     }

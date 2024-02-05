@@ -45,8 +45,8 @@
 
 %nonassoc <num> CMP
 %left PIPE 
-%left '+' '-'
-%left '*' '/' MOD
+%left <num> '+' '-'
+%left <num> '*' '/' '%'
 
 %%
 
@@ -117,11 +117,11 @@ Expression: SimpleExpression
 
 SimpleExpression: '(' Expression ')' { $$ = $2; }
     | SimpleExpression CMP SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
-    | SimpleExpression MOD SimpleExpression { $$ = ast_newnode_op('%', $1, $3); } 
-    | SimpleExpression '*' SimpleExpression { $$ = ast_newnode_op('*', $1, $3); }
-    | SimpleExpression '/' SimpleExpression { $$ = ast_newnode_op('/', $1, $3); }
-    | SimpleExpression '+' SimpleExpression { $$ = ast_newnode_op('+', $1, $3); }
-    | SimpleExpression '-' SimpleExpression { $$ = ast_newnode_op('-', $1, $3); }
+    | SimpleExpression '%' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); } 
+    | SimpleExpression '*' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
+    | SimpleExpression '/' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
+    | SimpleExpression '+' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
+    | SimpleExpression '-' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
     | IfExpression
     | BuiltInFnCall
     | FnCall

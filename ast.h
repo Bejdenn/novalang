@@ -18,10 +18,15 @@ enum nodetype
     FN_BLOCK
 };
 
-enum cmp
+enum op
 {
-    EQ = 12,
+    ADD = 12,
+    MINUS,
+    MUL,
+    DIV,
     GRT,
+    MOD,
+    EQ,
     LESS,
     GRT_OR_EQ,
     LESS_OR_EQ,
@@ -133,7 +138,7 @@ struct block
 
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r);
 
-struct ast *ast_newnode_op(char op, struct ast *l, struct ast *r);
+struct ast *ast_newnode_op(enum op op, struct ast *l, struct ast *r);
 
 struct ast *ast_newnode_num(int d);
 

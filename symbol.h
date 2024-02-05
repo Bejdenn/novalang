@@ -5,7 +5,7 @@
 
 enum value_type
 {
-    T_INT = 18,
+    T_INT = 1<<5,
     T_FLT,
     T_STR,
     T_BOOL,

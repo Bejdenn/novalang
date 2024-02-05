@@ -38,10 +38,6 @@ BOOL       (true|false)
 IDENTIFIER [a-zA-Z0-9_]+
 
 %%
-"+" |
-"-" |
-"*" |
-"/" |
 ";" |
 ":" |
 "(" |
@@ -51,9 +47,14 @@ IDENTIFIER [a-zA-Z0-9_]+
 "," |
 "=" { return yytext[0]; }
 
-"mod" { return MOD; }
 
 "|>" { return PIPE; }
+
+"+" { yylval.num = ADD;   return yytext[0]; }
+"-" { yylval.num = MINUS; return yytext[0]; }
+"*" { yylval.num = MUL;   return yytext[0]; }
+"/" { yylval.num = DIV;   return yytext[0]; }
+"mod" { yylval.num = MOD; return '%'; }
 
 "==" { yylval.num = EQ;         return CMP; }
 "!=" { yylval.num = N_EQ;       return CMP; }
