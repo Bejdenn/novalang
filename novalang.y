@@ -136,6 +136,7 @@ SimpleExpression: '(' Expression ')' { $$ = $2; }
     | ID { $$ = ast_newnode_ref($1); }
     | ID '[' Expression ']' { $$ = ast_newnode_index($1, $3); }
     | '[' ArgList ']' { $$ = ast_newnode_array($2); }
+    | '[' ']' { $$ = ast_newnode_array(NULL); }
 
 Pipe: SimpleExpression PIPE  { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_decl("it", ($1->type)); } { $<a>$ = ast_newnode_assign("it", $1); } PipeBody { $$ = ast_newnode_pipe($<a>4, $5); scope_end($<st>3); }
 

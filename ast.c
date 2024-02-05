@@ -753,12 +753,47 @@ union s_val *ast_eval(struct ast *a)
             v->num = (rand() % (upper - lower + 1)) + lower;
             break;
         }
+        else if (strcmp(call->fn->name, "read_ints") == 0)
+        {
+            char line[128] = {0};
+            union s_val *array = ast_eval(call->args->r)->array;
+            int count = 0;
+            if (fgets(line, sizeof(line), stdin))
+            {
+                int i = 0;
+                char *token = strtok(line, " ");
+                while (token != NULL)
+                {
+                    if (1 != sscanf(token, "%d", &array[i++].num))
+                    {
+                        printf("Invalid input\n");
+                        exit(1);
+                    }
+                    count++;
+                    token = strtok(NULL, " ");
+                }
+            }
+            v->num = count;
+            break;
+        }
+        else if (strcmp(call->fn->name, "print_arr") == 0)
+        {
+            int count = ast_eval(call->args->r)->num;
+            union s_val *array = ast_eval(call->args->l->r)->array;
+            for (int i = 0; i < count; i++)
+            {
+                printf("%d ", array[i].num);
+            }
+            printf("\n");
+            break;
+        }
         else
         {
             // normally this is checked when type checking, but who knows
             printf("Unknown built-in function: %s\n", call->fn->name);
             exit(1);
         }
+        break;
     }
     case USER_FUNCTION:
     {
