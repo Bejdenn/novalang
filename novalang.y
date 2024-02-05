@@ -110,6 +110,7 @@ ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$
 VarDeclaration: ID ':' Type { $$ = ast_newnode_decl($1, $3); }
 
 VarAssignment: ID '=' Expression { $$ = ast_newnode_assign($1, $3); }
+    | ID '[' Expression ']' '=' Expression { $$ = ast_newnode_index_assign($1, $3, $6); }
 
 Type: TYPE
     | TYPE '[' ']' { $$ = $1 | T_ARRAY; }

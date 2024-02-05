@@ -17,6 +17,7 @@ enum nodetype
     USER_FUNCTION,
     FN_BLOCK,
     INDEX,
+    INDEX_ASSIGNMENT
 };
 
 enum op
@@ -109,6 +110,16 @@ struct symindex
     struct ast *index;
 };
 
+struct indexassign
+{
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct symbol *symbol;
+    struct ast *index;
+    struct ast *v;
+};
+
 struct arglist
 {
     int nodetype;
@@ -169,6 +180,8 @@ struct ast *ast_newnode_array(struct ast *items);
 struct ast *ast_newnode_decl(char *sym_name, enum value_type type);
 
 struct ast *ast_newnode_assign(char *sym_name, struct ast *v);
+
+struct ast *ast_newnode_index_assign(char *sym_name, struct ast *index, struct ast *v);
 
 struct ast *ast_newnode_ref(char *sym_name);
 

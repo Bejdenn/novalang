@@ -322,6 +322,24 @@ struct ast *ast_newnode_assign(char *sym_name, struct ast *v)
     return (struct ast *)a;
 }
 
+struct ast *ast_newnode_index_assign(char *sym_name, struct ast *index, struct ast *v)
+{
+    struct ast *a = ast_newnode_index(sym_name, index);
+    struct indexassign *arr_assign = (struct indexassign *)a;
+    arr_assign->nodetype = INDEX_ASSIGNMENT;
+    arr_assign->v = v;
+
+    if (a->type != v->type)
+    {
+        char str[100];
+        sprintf(str, "%d: Cannot assign '%s' to '%s'\n", yylineno, lookup_value_type_name(v->type),
+                lookup_value_type_name(a->type));
+        add_syntax_err(str);
+    }
+
+    return a;
+}
+
 struct ast *ast_newnode_ref(char *sym_name)
 {
     struct symref *a = malloc(sizeof(struct symref));
@@ -587,6 +605,13 @@ union s_val *ast_eval(struct ast *a)
     case ASSIGNMENT:
         ((struct symassign *)a)->symbol->val = ast_eval(((struct symassign *)a)->v);
         break;
+    case INDEX_ASSIGNMENT:
+    {
+        struct indexassign *i = (struct indexassign *)a;
+        int index = ast_eval(i->index)->num;
+        i->symbol->val->array[index] = *ast_eval(i->v);
+        break;
+    }
     case T_INT:
         v->num = ((struct numval *)a)->number;
         break;
