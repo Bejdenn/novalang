@@ -22,4 +22,4 @@ test: novalang
 	sh tests.sh
 
 clean:
-	rm lex.yy.* novalang.tab.* novalang 
+	rm ast.o symbol.o lex.yy.* novalang.tab.* novalang

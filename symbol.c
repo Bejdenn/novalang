@@ -44,12 +44,12 @@ struct symbol *stack_peek(const stack *s)
 }
 
 struct symbol_table_entry *symbol_table;
-struct context context = {.level = 0, .scope = S_GLOBAL_SCOPE};
+struct context context = {.level = 0, .scope = S_GLOBAL_SCOPE, .index = 0};
 
 struct fn_symbol *fn_table;
 
 // TODO rewrite using a "map" (access static list by index)
-char *lookup_value_type_name(enum value_type type)
+char *lookup_value_type_name(int type)
 {
     switch (type)
     {
@@ -65,6 +65,14 @@ char *lookup_value_type_name(enum value_type type)
         return "unknown";
     case T_VOID:
         return "void";
+    case T_INT | T_ARRAY:
+        return "int[]";
+    case T_FLT | T_ARRAY:
+        return "float[]";
+    case T_STR | T_ARRAY:
+        return "string[]";
+    case T_BOOL | T_ARRAY:
+        return "bool[]";
     default:
         return "never";
     }
@@ -98,8 +106,10 @@ struct symbol *symbol_add(char *name, struct symbol *s)
     if (sym)
     {
         // local variable can be redeclared (e.g. this is used for the pipe operator)
-        int local = sym->scope == S_LOCAL_SCOPE && context.scope == S_LOCAL_SCOPE;
-        if (!local && sym->scope == context.scope && sym->level <= context.level)
+        int local = (sym->scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE && (context.scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE;
+        int can_be_shadowed = (sym->scope & S_GLOBAL_SCOPE) == S_GLOBAL_SCOPE && (context.scope & S_FUNCTION_SCOPE) == S_FUNCTION_SCOPE;
+
+        if (!local && !can_be_shadowed && sym->level <= context.level && sym->index == context.index)
         {
             fprintf(stderr, "redeclaration of '%s'", name);
             exit(1);
@@ -148,30 +158,28 @@ struct symbol_table_entry *symbol_table_copy()
 struct symbol_table_entry *scope_start(enum scope_type scope)
 {
     struct symbol_table_entry *current_table = symbol_table;
-    symbol_table = symbol_table_copy();
-    context.level++;
-
-    // this is a bit too defensive, but this way we can protect from unexpected scope changes
     if (scope == S_FUNCTION_SCOPE)
     {
-        context.scope = S_FUNCTION_SCOPE;
+        symbol_table = symbol_table_copy();
     }
-    else if (scope == S_LOCAL_SCOPE)
-    {
-        context.scope = S_LOCAL_SCOPE;
-    }
+    context.level++;
+    context.index++;
+
+    context.scope |= scope;
 
     return current_table;
 }
 
-void scope_end(struct symbol_table_entry *previous_table)
+struct symbol_table_entry *scope_end(enum scope_type type, struct symbol_table_entry *previous_table)
 {
     context.level--;
-    symbol_table = previous_table;
-    if (context.level == 0)
+    struct symbol_table_entry *current_table = symbol_table;
+    if (type == S_FUNCTION_SCOPE)
     {
-        context.scope = S_GLOBAL_SCOPE;
+        symbol_table = previous_table;
     }
+    context.scope ^= type;
+    return current_table;
 }
 
 struct fn_symbol *fn_get(char *s)
@@ -193,16 +201,63 @@ void fn_table_init()
         fn_table[i].name = NULL;
     }
 
-    struct symbol *p = (struct symbol[]){{.type = T_STR}};
-    fn_add("print", T_VOID, &p, 1);
+    struct symbol *s1, *s2;
 
-    p = (struct symbol[]){{.type = T_INT}};
-    fn_add("print_int", T_VOID, &p, 1);
+    struct symbol **p = malloc(sizeof(struct symbol) * 1);
+
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_STR;
+    s1->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    fn_add("print", T_VOID, p, 1);
+
+    p = malloc(sizeof(struct symbol) * 1);
+
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_INT;
+    s1->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    fn_add("print_int", T_VOID, p, 1);
 
     fn_add("read_int", T_INT, NULL, 0);
 
-    p = (struct symbol[]){{.type = T_INT}, {.type = T_INT}};
-    fn_add("random_int", T_INT, &p, 2);
+    p = malloc(sizeof(struct symbol) * 2);
+
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_INT;
+    s1->val = malloc(sizeof(union s_val));
+
+    s2 = malloc(sizeof(struct symbol) * 1);
+    s2->type = T_INT;
+    s2->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    p[1] = s2;
+    fn_add("random_int", T_INT, p, 2);
+
+    p = malloc(sizeof(struct symbol) * 1);
+
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_INT | T_ARRAY;
+    s1->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    fn_add("read_ints", T_INT, p, 1);
+
+    p = malloc(sizeof(struct symbol) * 2);
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_INT | T_ARRAY;
+    s1->val = malloc(sizeof(union s_val));
+
+    s2 = malloc(sizeof(struct symbol) * 1);
+    s2->type = T_INT;
+    s2->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    p[1] = s2;
+    fn_add("print_arr", T_VOID, p, 2);
 }
 
 struct fn_symbol *fn_add(char *name, enum value_type return_type, struct symbol *params[], int params_count)

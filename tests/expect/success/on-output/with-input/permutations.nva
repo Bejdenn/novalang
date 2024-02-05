@@ -1,0 +1,28 @@
+fn swap(a: int[], x: int, y:int): void {
+    tmp: int;
+    tmp = a[x];
+    a[x] = a[y];
+    a[y] = tmp;
+}
+
+input: int[];
+input = [0]; // array has to have a single element to be able to infer its type...
+len := read_ints(input);
+
+fn permute(a: int[], l: int, r: int): void {
+    if l == r {
+        print_arr(a, len);
+    } else {
+        i := l;
+        for i <= (r - 1) {
+            swap(a, l, i);
+            permute(a, l + 1, r);
+            swap(a, l, i);
+            i = i + 1;
+        }
+   }
+}
+
+// print("");
+print("Permutations:");
+permute(input, 0, len);

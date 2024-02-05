@@ -42,21 +42,21 @@ void do_arithm_op(union s_val *, int, struct ast *);
 
 void do_cmp(union s_val *, int, struct ast *);
 
-enum value_type op_get_type(int, char, struct ast *, struct ast *);
+enum value_type op_get_type(int, enum op, struct ast *, struct ast *);
 
 char *lookup_op(int op)
 {
     switch (op)
     {
-    case '+':
+    case ADD:
         return "+";
-    case '-':
+    case MINUS:
         return "-";
-    case '%':
+    case MOD:
         return "%";
-    case '*':
+    case MUL:
         return "*";
-    case '/':
+    case DIV:
         return "/";
     case EQ:
         return "==";
@@ -111,11 +111,11 @@ char *str_concat(char *s1, char *s2)
     return s;
 }
 
-enum value_type op_get_type(int lineno, char op, struct ast *l, struct ast *r)
+enum value_type op_get_type(int lineno, enum op op, struct ast *l, struct ast *r)
 {
     switch (op)
     {
-    case '+':
+    case ADD:
         switch (l->type)
         {
         case T_INT:
@@ -155,10 +155,10 @@ enum value_type op_get_type(int lineno, char op, struct ast *l, struct ast *r)
             break;
         }
         break;
-    case '-':
-    case '%':
-    case '*':
-    case '/':
+    case MINUS:
+    case MOD:
+    case MUL:
+    case DIV:
         if (l->type == T_INT && r->type == T_INT)
         {
             return T_INT;
@@ -203,7 +203,7 @@ struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r)
     return a;
 }
 
-struct ast *ast_newnode_op(char op, struct ast *l, struct ast *r)
+struct ast *ast_newnode_op(enum op op, struct ast *l, struct ast *r)
 {
     struct ast *a = malloc(sizeof(struct ast));
 
@@ -243,6 +243,32 @@ struct ast *ast_newnode_bool(int b)
     a->type = T_BOOL;
     a->lineno = yylineno;
     a->boolean = b;
+    return (struct ast *)a;
+}
+
+struct ast *ast_newnode_array(struct ast *items)
+{
+    struct arrayval *a = malloc(sizeof(struct arrayval));
+    a->nodetype = T_ARRAY;
+    a->type = T_ARRAY;
+    a->lineno = yylineno;
+
+    if (items != NULL)
+    {
+        a->type = a->type | items->r->type;
+    }
+
+    for (struct ast *i = items; i != NULL; i = i->l)
+    {
+        if ((a->type ^ T_ARRAY) != i->r->type)
+        {
+            type_mismatch(yylineno, a->type, i->r->type);
+            a->type = T_UNKNOWN;
+            return (struct ast *)a;
+        }
+    }
+
+    a->items = items;
     return (struct ast *)a;
 }
 
@@ -296,6 +322,24 @@ struct ast *ast_newnode_assign(char *sym_name, struct ast *v)
     return (struct ast *)a;
 }
 
+struct ast *ast_newnode_index_assign(char *sym_name, struct ast *index, struct ast *v)
+{
+    struct ast *a = ast_newnode_index(sym_name, index);
+    struct indexassign *arr_assign = (struct indexassign *)a;
+    arr_assign->nodetype = INDEX_ASSIGNMENT;
+    arr_assign->v = v;
+
+    if (a->type != v->type)
+    {
+        char str[100];
+        sprintf(str, "%d: Cannot assign '%s' to '%s'\n", yylineno, lookup_value_type_name(v->type),
+                lookup_value_type_name(a->type));
+        add_syntax_err(str);
+    }
+
+    return a;
+}
+
 struct ast *ast_newnode_ref(char *sym_name)
 {
     struct symref *a = malloc(sizeof(struct symref));
@@ -314,6 +358,46 @@ struct ast *ast_newnode_ref(char *sym_name)
     a->type = s->type;
     a->lineno = yylineno;
     a->symbol = s;
+    return (struct ast *)a;
+}
+
+struct ast *ast_newnode_index(char *sym_name, struct ast *index)
+{
+    struct symindex *a = malloc(sizeof(struct symindex));
+    a->nodetype = INDEX;
+
+    struct symbol *s = symbol_get(sym_name);
+    if (!s)
+    {
+        char str[100];
+        sprintf(str, "%d: Undeclared reference '%s'\n", yylineno, sym_name);
+        add_syntax_err(str);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
+    if ((s->type & T_ARRAY) != T_ARRAY)
+    {
+        char str[100];
+        sprintf(str, "%d: '%s' is not an array\n", yylineno, sym_name);
+        add_syntax_err(str);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
+    if (index->type != T_INT)
+    {
+        char str[100];
+        sprintf(str, "%d: Index must be an integer, but was '%s'\n", yylineno, lookup_value_type_name(index->type));
+        add_syntax_err(str);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
+    a->type = s->type ^ T_ARRAY;
+    a->lineno = yylineno;
+    a->symbol = s;
+    a->index = index;
     return (struct ast *)a;
 }
 
@@ -404,7 +488,7 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *bl
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *prev_scope)
+struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *prev_scope, enum scope_type scope_to_exit)
 {
     struct block *a = malloc(sizeof(struct block));
     a->nodetype = BLOCK;
@@ -419,7 +503,7 @@ struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol
     a->stmts = stmts;
     a->expr = expr;
 
-    scope_end(prev_scope);
+    a->scope = scope_end(scope_to_exit, prev_scope);
 
     return (struct ast *)a;
 }
@@ -519,8 +603,15 @@ union s_val *ast_eval(struct ast *a)
     case DECLARATION:
         return v;
     case ASSIGNMENT:
-        ((struct symassign *)a)->symbol->val = ast_eval(((struct symassign *)a)->v);
+        *((struct symassign *)a)->symbol->val = *ast_eval(((struct symassign *)a)->v);
         break;
+    case INDEX_ASSIGNMENT:
+    {
+        struct indexassign *i = (struct indexassign *)a;
+        int index = ast_eval(i->index)->num;
+        i->symbol->val->array[index] = *ast_eval(i->v);
+        break;
+    }
     case T_INT:
         v->num = ((struct numval *)a)->number;
         break;
@@ -530,13 +621,36 @@ union s_val *ast_eval(struct ast *a)
     case T_BOOL:
         v->boolean = ((struct boolval *)a)->boolean;
         break;
+    case T_ARRAY:
+    {
+        struct arrayval *arr = (struct arrayval *)a;
+        int size = 0;
+        for (struct ast *i = arr->items; i != NULL; i = i->l)
+        {
+            size++;
+        }
+
+        v->array = malloc(sizeof(union s_val) * size);
+        int i = size - 1;
+        for (struct ast *item = arr->items; item != NULL; item = item->l)
+        {
+            v->array[i--] = *ast_eval(item->r);
+        }
+        break;
+    }
     case REFERENCE:
         return ((struct symref *)a)->symbol->val;
-    case '+':
-    case '-':
-    case '%':
-    case '*':
-    case '/':
+    case INDEX:
+    {
+        struct symindex *i = (struct symindex *)a;
+        int index = ast_eval(i->index)->num;
+        return &i->symbol->val->array[index];
+    }
+    case ADD:
+    case MINUS:
+    case MOD:
+    case MUL:
+    case DIV:
         do_arithm_op(v, a->nodetype, a);
         break;
     case EQ:
@@ -639,12 +753,47 @@ union s_val *ast_eval(struct ast *a)
             v->num = (rand() % (upper - lower + 1)) + lower;
             break;
         }
+        else if (strcmp(call->fn->name, "read_ints") == 0)
+        {
+            char line[128] = {0};
+            union s_val *array = ast_eval(call->args->r)->array;
+            int count = 0;
+            if (fgets(line, sizeof(line), stdin))
+            {
+                int i = 0;
+                char *token = strtok(line, " ");
+                while (token != NULL)
+                {
+                    if (1 != sscanf(token, "%d", &array[i++].num))
+                    {
+                        printf("Invalid input\n");
+                        exit(1);
+                    }
+                    count++;
+                    token = strtok(NULL, " ");
+                }
+            }
+            v->num = count;
+            break;
+        }
+        else if (strcmp(call->fn->name, "print_arr") == 0)
+        {
+            int count = ast_eval(call->args->r)->num;
+            union s_val *array = ast_eval(call->args->l->r)->array;
+            for (int i = 0; i < count; i++)
+            {
+                printf("%d ", array[i].num);
+            }
+            printf("\n");
+            break;
+        }
         else
         {
             // normally this is checked when type checking, but who knows
             printf("Unknown built-in function: %s\n", call->fn->name);
             exit(1);
         }
+        break;
     }
     case USER_FUNCTION:
     {
@@ -657,13 +806,80 @@ union s_val *ast_eval(struct ast *a)
         for (struct ast *arg = call->args; arg != NULL && call->fn->params != NULL; arg = arg->l)
         {
             params_buf[params_count - 1] = call->fn->params[params_count - 1]->val;
-            call->fn->params[call->fn->params_count - 1]->val = ast_eval(arg->r);
+            union s_val *val = ast_eval(arg->r);
+            call->fn->params[params_count - 1]->val = val;
             params_count--;
+        }
+
+        union s_val **symbol_buf[TBL_SIZE];
+        for (int i = 0; i < TBL_SIZE; i++)
+        {
+            int stack_size = ((struct block *)r->block)->scope[i].references->size;
+            symbol_buf[i] = malloc(sizeof(union s_val *) * stack_size);
+            for (int j = 0; j < stack_size; j++)
+            {
+                struct symbol *current_s = ((struct block *)r->block)->scope[i].references->val[j];
+                int is_param = 0;
+                for (int k = 0; k < call->fn->params_count; k++)
+                {
+                    if (call->fn->params[k] == current_s)
+                    {
+                        is_param = 1;
+                        break;
+                    }
+                }
+
+                if (is_param)
+                {
+                    continue;
+                }
+
+                // skip global values
+                if (current_s->scope == S_GLOBAL_SCOPE)
+                {
+                    continue;
+                }
+
+                symbol_buf[i][j] = current_s->val;
+                current_s->val = malloc(sizeof(union s_val));
+            }
         }
 
         if (r != NULL)
         {
             v = ast_eval(r->block);
+        }
+
+        // restore the symbol table
+        for (int i = 0; i < TBL_SIZE; i++)
+        {
+            int stack_size = ((struct block *)r->block)->scope[i].references->size;
+            for (int j = 0; j < stack_size; j++)
+            {
+                struct symbol *current_s = ((struct block *)r->block)->scope[i].references->val[j];
+
+                int is_param = 0;
+                for (int k = 0; k < call->fn->params_count; k++)
+                {
+                    if (call->fn->params[k] == current_s)
+                    {
+                        is_param = 1;
+                        break;
+                    }
+                }
+
+                if (is_param)
+                {
+                    continue;
+                }
+
+                if (current_s->scope == S_GLOBAL_SCOPE)
+                {
+                    continue;
+                }
+
+                current_s->val = symbol_buf[i][j];
+            }
         }
 
         params_count = call->fn->params_count;
@@ -690,7 +906,7 @@ void do_arithm_op(union s_val *v, int op, struct ast *a)
 
     switch (op)
     {
-    case '+':
+    case ADD:
         switch (a->l->type)
         {
         case T_INT:
@@ -726,16 +942,16 @@ void do_arithm_op(union s_val *v, int op, struct ast *a)
             break;
         }
         break;
-    case '-':
+    case MINUS:
         v->num = l_val->num - r_val->num;
         break;
-    case '%':
+    case MOD:
         v->num = l_val->num % r_val->num;
         break;
-    case '*':
+    case MUL:
         v->num = l_val->num * r_val->num;
         break;
-    case '/':
+    case DIV:
         v->num = l_val->num / r_val->num;
         break;
     }

@@ -15,13 +15,20 @@ enum nodetype
     ARG_LIST,
     BLOCK,
     USER_FUNCTION,
-    FN_BLOCK
+    FN_BLOCK,
+    INDEX,
+    INDEX_ASSIGNMENT
 };
 
-enum cmp
+enum op
 {
-    EQ = 12,
+    ADD = 15,
+    MINUS,
+    MUL,
+    DIV,
     GRT,
+    MOD,
+    EQ,
     LESS,
     GRT_OR_EQ,
     LESS_OR_EQ,
@@ -61,6 +68,14 @@ struct boolval
     int boolean;
 };
 
+struct arrayval {
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct symbol *symbol;
+    struct ast *items;
+};
+
 struct symdecl
 {
     int nodetype;
@@ -84,6 +99,25 @@ struct symref
     int lineno;
     enum value_type type;
     struct symbol *symbol;
+};
+
+struct symindex
+{
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct symbol *symbol;
+    struct ast *index;
+};
+
+struct indexassign
+{
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct symbol *symbol;
+    struct ast *index;
+    struct ast *v;
 };
 
 struct arglist
@@ -126,14 +160,14 @@ struct block
     int nodetype;
     int lineno;
     enum value_type type;
-    struct symbol *scope;
+    struct symbol_table_entry *scope;
     struct ast *stmts;
     struct ast *expr;
 };
 
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r);
 
-struct ast *ast_newnode_op(char op, struct ast *l, struct ast *r);
+struct ast *ast_newnode_op(enum op op, struct ast *l, struct ast *r);
 
 struct ast *ast_newnode_num(int d);
 
@@ -141,11 +175,17 @@ struct ast *ast_newnode_str(char *s);
 
 struct ast *ast_newnode_bool(int b);
 
+struct ast *ast_newnode_array(struct ast *items);
+
 struct ast *ast_newnode_decl(char *sym_name, enum value_type type);
 
 struct ast *ast_newnode_assign(char *sym_name, struct ast *v);
 
+struct ast *ast_newnode_index_assign(char *sym_name, struct ast *index, struct ast *v);
+
 struct ast *ast_newnode_ref(char *sym_name);
+
+struct ast* ast_newnode_index(char *sym_name, struct ast *index);
 
 struct ast *ast_newnode_builtin_fn_call(char *fn, struct ast *args);
 
@@ -157,7 +197,7 @@ struct ast *ast_newnode_flow(int nodetype, struct ast *condition, struct ast *bl
 
 struct ast *ast_newnode_exprblock(struct ast *stmts, struct ast *expr);
 
-struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *scope);
+struct ast *ast_newnode_block(struct ast *stmts, struct ast *expr, struct symbol_table_entry *scope, enum scope_type scope_to_exit);
 
 struct fn_symbol *function_signature(char *fn_name, struct ast *params, enum value_type type);
 

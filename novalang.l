@@ -38,10 +38,6 @@ BOOL       (true|false)
 IDENTIFIER [a-zA-Z0-9_]+
 
 %%
-"+" |
-"-" |
-"*" |
-"/" |
 ";" |
 ":" |
 "(" |
@@ -49,11 +45,18 @@ IDENTIFIER [a-zA-Z0-9_]+
 "{" |
 "}" |
 "," |
-"=" { return yytext[0]; }
+"=" |
+"[" | 
+"]" { return yytext[0]; }
 
-"mod" { return MOD; }
 
 "|>" { return PIPE; }
+
+"+" { yylval.num = ADD;   return yytext[0]; }
+"-" { yylval.num = MINUS; return yytext[0]; }
+"*" { yylval.num = MUL;   return yytext[0]; }
+"/" { yylval.num = DIV;   return yytext[0]; }
+"mod" { yylval.num = MOD; return '%'; }
 
 "==" { yylval.num = EQ;         return CMP; }
 "!=" { yylval.num = N_EQ;       return CMP; }
@@ -92,10 +95,12 @@ IDENTIFIER [a-zA-Z0-9_]+
     return BOOL;
 }
 
-"print"     |
-"print_int" |
-"read_int"  |
-"random_int" { yylval.str = strdup(yytext); return BUILTIN_FN; }
+"print"      |
+"print_int"  |
+"read_int"   |
+"random_int" | 
+"read_ints"  | 
+"print_arr" { yylval.str = strdup(yytext); return BUILTIN_FN; }
 
 {IDENTIFIER} { 
     yylval.str = strdup(yytext);
