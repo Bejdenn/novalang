@@ -163,6 +163,8 @@ struct fn_symbol *function_signature(char *fn_name, struct ast *params, enum val
 
 struct ast *ast_newnode_ufn_call(char *fn_name, struct ast *args);
 
+struct ast *ast_newnode_pipe(struct ast *l, struct ast *r);
+
 void ast_interpret(struct ast *);
 
 union s_val *ast_eval(struct ast *);

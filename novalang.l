@@ -53,6 +53,8 @@ IDENTIFIER [a-zA-Z0-9_]+
 
 "mod" { return MOD; }
 
+"|>" { return PIPE; }
+
 "==" { yylval.num = EQ;         return CMP; }
 "!=" { yylval.num = N_EQ;       return CMP; }
 "<"  { yylval.num = LESS;       return CMP; }
