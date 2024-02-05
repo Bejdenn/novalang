@@ -36,6 +36,7 @@
 %type <a> VarAssignment BuiltInFnCall IfExpression IfStatement ForStatement 
 %type <a> FnDeclaration ParamList FnCall ArgList Arg ExpressionBlock
 %type <a> StatementBlock Param Pipe PipeBody SimpleExpression
+%type <num> Type
 
 %type <fs> FnSignature
 
@@ -74,14 +75,14 @@ FnDeclaration: FN FnScope FnSignature '{' Statements Expression '}'
 
 FnScope: %empty { $$ = scope_start(S_FUNCTION_SCOPE); }
 
-FnSignature: ID '(' ParamList ')' ':' TYPE { $$ = function_signature($1, $3, $6); }
+FnSignature: ID '(' ParamList ')' ':' Type { $$ = function_signature($1, $3, $6); }
 
 // we can use variable declarations in the param list because function declarations have their own scope
 ParamList: ParamList ',' Param { $$ = ast_newnode(ARG_LIST, $1, $3); }
     | Param { $$ = ast_newnode(ARG_LIST, NULL, $1); }
     | %empty { $$ = NULL; }
 
-Param: ID ':' TYPE { $$ = ast_newnode_decl($1, $3); }
+Param: ID ':' Type { $$ = ast_newnode_decl($1, $3); }
 
 FnCall: ID '(' ArgList ')' { $$ = ast_newnode_fn_call($1, $3); }
     | ID '(' ')' { $$ = ast_newnode_fn_call($1, NULL); }
@@ -106,9 +107,12 @@ BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin_fn_call($1,
 
 ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$ = ast_newnode_assign($1, $4); }
 
-VarDeclaration: ID ':' TYPE { $$ = ast_newnode_decl($1, $3); }
+VarDeclaration: ID ':' Type { $$ = ast_newnode_decl($1, $3); }
 
 VarAssignment: ID '=' Expression { $$ = ast_newnode_assign($1, $3); }
+
+Type: TYPE
+    | TYPE '[' ']' { $$ = $1 | T_ARRAY; }
 
 StatementBlock: BlockScope '{' Statements '}' { $$ = ast_newnode_block($3, NULL, $1); }
 
@@ -129,6 +133,8 @@ SimpleExpression: '(' Expression ')' { $$ = $2; }
     | STRING { $$ = ast_newnode_str($1); }
     | BOOL { $$ = ast_newnode_bool($1); }
     | ID { $$ = ast_newnode_ref($1); }
+    | ID '[' Expression ']' { $$ = ast_newnode_index($1, $3); }
+    | '[' ArgList ']' { $$ = ast_newnode_array($2); }
 
 Pipe: SimpleExpression PIPE  { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_decl("it", ($1->type)); } { $<a>$ = ast_newnode_assign("it", $1); } PipeBody { $$ = ast_newnode_pipe($<a>4, $5); scope_end($<st>3); }
 

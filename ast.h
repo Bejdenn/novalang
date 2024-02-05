@@ -15,12 +15,13 @@ enum nodetype
     ARG_LIST,
     BLOCK,
     USER_FUNCTION,
-    FN_BLOCK
+    FN_BLOCK,
+    INDEX,
 };
 
 enum op
 {
-    ADD = 12,
+    ADD = 15,
     MINUS,
     MUL,
     DIV,
@@ -66,6 +67,14 @@ struct boolval
     int boolean;
 };
 
+struct arrayval {
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct symbol *symbol;
+    struct ast *items;
+};
+
 struct symdecl
 {
     int nodetype;
@@ -89,6 +98,15 @@ struct symref
     int lineno;
     enum value_type type;
     struct symbol *symbol;
+};
+
+struct symindex
+{
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    struct symbol *symbol;
+    struct ast *index;
 };
 
 struct arglist
@@ -146,11 +164,15 @@ struct ast *ast_newnode_str(char *s);
 
 struct ast *ast_newnode_bool(int b);
 
+struct ast *ast_newnode_array(struct ast *items);
+
 struct ast *ast_newnode_decl(char *sym_name, enum value_type type);
 
 struct ast *ast_newnode_assign(char *sym_name, struct ast *v);
 
 struct ast *ast_newnode_ref(char *sym_name);
+
+struct ast* ast_newnode_index(char *sym_name, struct ast *index);
 
 struct ast *ast_newnode_builtin_fn_call(char *fn, struct ast *args);
 

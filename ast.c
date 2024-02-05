@@ -246,6 +246,32 @@ struct ast *ast_newnode_bool(int b)
     return (struct ast *)a;
 }
 
+struct ast *ast_newnode_array(struct ast *items)
+{
+    struct arrayval *a = malloc(sizeof(struct arrayval));
+    a->nodetype = T_ARRAY;
+    a->type = T_ARRAY;
+    a->lineno = yylineno;
+
+    if (items != NULL)
+    {
+        a->type = a->type | items->r->type;
+    }
+
+    for (struct ast *i = items; i != NULL; i = i->l)
+    {
+        if ((a->type ^ T_ARRAY) != i->r->type)
+        {
+            type_mismatch(yylineno, a->type, i->r->type);
+            a->type = T_UNKNOWN;
+            return (struct ast *)a;
+        }
+    }
+
+    a->items = items;
+    return (struct ast *)a;
+}
+
 struct ast *ast_newnode_decl(char *sym_name, enum value_type type)
 {
     struct symdecl *a = malloc(sizeof(struct symdecl));
@@ -314,6 +340,46 @@ struct ast *ast_newnode_ref(char *sym_name)
     a->type = s->type;
     a->lineno = yylineno;
     a->symbol = s;
+    return (struct ast *)a;
+}
+
+struct ast *ast_newnode_index(char *sym_name, struct ast *index)
+{
+    struct symindex *a = malloc(sizeof(struct symindex));
+    a->nodetype = INDEX;
+
+    struct symbol *s = symbol_get(sym_name);
+    if (!s)
+    {
+        char str[100];
+        sprintf(str, "%d: Undeclared reference '%s'\n", yylineno, sym_name);
+        add_syntax_err(str);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
+    if ((s->type & T_ARRAY) != T_ARRAY)
+    {
+        char str[100];
+        sprintf(str, "%d: '%s' is not an array\n", yylineno, sym_name);
+        add_syntax_err(str);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
+    if (index->type != T_INT)
+    {
+        char str[100];
+        sprintf(str, "%d: Index must be an integer, but was '%s'\n", yylineno, lookup_value_type_name(index->type));
+        add_syntax_err(str);
+        a->type = T_UNKNOWN;
+        return (struct ast *)a;
+    }
+
+    a->type = s->type ^ T_ARRAY;
+    a->lineno = yylineno;
+    a->symbol = s;
+    a->index = index;
     return (struct ast *)a;
 }
 
@@ -530,8 +596,31 @@ union s_val *ast_eval(struct ast *a)
     case T_BOOL:
         v->boolean = ((struct boolval *)a)->boolean;
         break;
+    case T_ARRAY:
+    {
+        struct arrayval *arr = (struct arrayval *)a;
+        int size = 0;
+        for (struct ast *i = arr->items; i != NULL; i = i->l)
+        {
+            size++;
+        }
+
+        v->array = malloc(sizeof(union s_val) * size);
+        int i = size - 1;
+        for (struct ast *item = arr->items; item != NULL; item = item->l)
+        {
+            v->array[i--] = *ast_eval(item->r);
+        }
+        break;
+    }
     case REFERENCE:
         return ((struct symref *)a)->symbol->val;
+    case INDEX:
+    {
+        struct symindex *i = (struct symindex *)a;
+        int index = ast_eval(i->index)->num;
+        return &i->symbol->val->array[index];
+    }
     case ADD:
     case MINUS:
     case MOD:

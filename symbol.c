@@ -49,7 +49,7 @@ struct context context = {.level = 0, .scope = S_GLOBAL_SCOPE};
 struct fn_symbol *fn_table;
 
 // TODO rewrite using a "map" (access static list by index)
-char *lookup_value_type_name(enum value_type type)
+char *lookup_value_type_name(int type)
 {
     switch (type)
     {
@@ -65,6 +65,14 @@ char *lookup_value_type_name(enum value_type type)
         return "unknown";
     case T_VOID:
         return "void";
+    case T_INT | T_ARRAY:
+        return "int[]";
+    case T_FLT | T_ARRAY:
+        return "float[]";
+    case T_STR | T_ARRAY:
+        return "string[]";
+    case T_BOOL | T_ARRAY:
+        return "bool[]";
     default:
         return "never";
     }

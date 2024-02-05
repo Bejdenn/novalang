@@ -45,7 +45,9 @@ IDENTIFIER [a-zA-Z0-9_]+
 "{" |
 "}" |
 "," |
-"=" { return yytext[0]; }
+"=" |
+"[" | 
+"]" { return yytext[0]; }
 
 
 "|>" { return PIPE; }

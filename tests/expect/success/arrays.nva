@@ -1,0 +1,17 @@
+// lists are implemented as array lists, so no size
+x: int[];
+
+// array literals
+x = [1, 2, 3];
+
+// access array values by index
+z := x[2];
+
+print("z: " + z);
+
+fn ok(arr: int[]): int[] {
+    [3, 2, 1]
+}
+
+arr := ok(x);
+print_int(arr[0]);

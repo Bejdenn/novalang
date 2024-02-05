@@ -10,7 +10,8 @@ enum value_type
     T_STR = 1 << 7,
     T_BOOL = 1 << 8,
     T_UNKNOWN = 1 << 9,
-    T_VOID = 1 << 10
+    T_VOID = 1 << 10,
+    T_ARRAY = 1 << 14
 };
 
 enum scope_type
@@ -35,13 +36,14 @@ typedef struct
     int size;
 } stack;
 
-char *lookup_value_type_name(enum value_type type);
+char *lookup_value_type_name(int type);
 
 union s_val
 {
     int num;
     char *str;
     int boolean;
+    union s_val *array;
 };
 
 struct fn_symbol
