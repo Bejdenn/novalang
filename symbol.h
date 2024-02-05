@@ -5,12 +5,12 @@
 
 enum value_type
 {
-    T_INT = 1<<5,
-    T_FLT,
-    T_STR,
-    T_BOOL,
-    T_UNKNOWN,
-    T_VOID
+    T_INT = 1 << 5,
+    T_FLT = 1 << 6,
+    T_STR = 1 << 7,
+    T_BOOL = 1 << 8,
+    T_UNKNOWN = 1 << 9,
+    T_VOID = 1 << 10
 };
 
 enum scope_type
