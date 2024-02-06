@@ -83,6 +83,8 @@ struct context
     int index;
 };
 
+int symbol_is_visible(struct symbol *s);
+
 struct symbol *symbol_get(char *name);
 
 struct symbol *symbol_add(char *name, struct symbol *s);

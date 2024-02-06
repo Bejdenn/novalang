@@ -1,2 +1,2 @@
 5: Undeclared reference 'inner'
-5: Argument 's' must be a 'string', but was 'unknown'
+5: Argument [1] must be a 'string', but was 'unknown'

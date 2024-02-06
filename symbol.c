@@ -88,6 +88,11 @@ void symbol_table_init()
     }
 }
 
+int symbol_is_visible(struct symbol *s)
+{
+    return s->level <= context.level || s->index == context.index;
+}
+
 struct symbol *symbol_get(char *name)
 {
     for (int i = 0; i < TBL_SIZE; i++)
@@ -105,11 +110,10 @@ struct symbol *symbol_add(char *name, struct symbol *s)
     struct symbol *sym = symbol_get(name);
     if (sym)
     {
-        // local variable can be redeclared (e.g. this is used for the pipe operator)
-        int local = (sym->scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE && (context.scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE;
-        int can_be_shadowed = (sym->scope & S_GLOBAL_SCOPE) == S_GLOBAL_SCOPE && (context.scope & S_FUNCTION_SCOPE) == S_FUNCTION_SCOPE;
+        int local = (s->scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE && (context.scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE;
+        int can_be_shadowed = (s->scope & S_GLOBAL_SCOPE) == S_GLOBAL_SCOPE && (context.scope & S_FUNCTION_SCOPE) == S_FUNCTION_SCOPE;
 
-        if (!local && !can_be_shadowed && sym->level <= context.level && sym->index == context.index)
+        if (!local && !can_be_shadowed && symbol_is_visible(sym) && symbol_is_visible(s))
         {
             fprintf(stderr, "redeclaration of '%s'", name);
             exit(1);

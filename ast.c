@@ -307,7 +307,7 @@ struct ast *ast_newnode_assign(char *sym_name, struct ast *v)
     a->type = T_VOID;
 
     struct symbol *s = symbol_get(sym_name);
-    if (!s)
+    if (!s || !symbol_is_visible(s))
     {
         char str[100];
         sprintf(str, "%d: Undeclared reference '%s'\n", yylineno, sym_name);
@@ -357,7 +357,7 @@ struct ast *ast_newnode_ref(char *sym_name)
     a->nodetype = REFERENCE;
 
     struct symbol *s = symbol_get(sym_name);
-    if (!s)
+    if (!s || !symbol_is_visible(s))
     {
         char str[100];
         sprintf(str, "%d: Undeclared reference '%s'\n", yylineno, sym_name);
@@ -378,7 +378,7 @@ struct ast *ast_newnode_index(char *sym_name, struct ast *index)
     a->nodetype = INDEX;
 
     struct symbol *s = symbol_get(sym_name);
-    if (!s)
+    if (!s || !symbol_is_visible(s))
     {
         char str[100];
         sprintf(str, "%d: Undeclared reference '%s'\n", yylineno, sym_name);
