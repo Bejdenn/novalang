@@ -1,0 +1,3 @@
+// the obvious case - explicit redeclarations
+x: int;
+x: str;

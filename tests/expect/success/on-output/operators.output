@@ -1,0 +1,9 @@
+string: There are 2 dogs.
+number: 4
+x: 1, y: 2
+Hallo == Hallo: true
+1 == Hallo: true
+x < y: true
+x > y: false
+x <= y: true
+x >= y: false

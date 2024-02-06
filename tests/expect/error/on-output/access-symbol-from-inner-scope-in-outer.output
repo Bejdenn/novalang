@@ -1,2 +1,2 @@
-5: Undeclared reference 'inner'
-5: Argument [1] must be a 'string', but was 'unknown'
+6: Undeclared reference 'inner'
+6: Argument [1] must be a 'string', but was 'unknown'

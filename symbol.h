@@ -16,10 +16,10 @@ enum value_type
 
 enum scope_type
 {
-    S_GLOBAL_SCOPE = 1<<1,
-    S_FUNCTION_SCOPE = 1<<2,
-    S_BLOCK_SCOPE = 1<<3,
-    S_LOCAL_SCOPE = 1<<4
+    S_GLOBAL_SCOPE = 1 << 1,
+    S_FUNCTION_SCOPE = 1 << 2,
+    S_BLOCK_SCOPE = 1 << 3,
+    S_LOCAL_SCOPE = 1 << 4
 };
 
 struct symbol
@@ -45,7 +45,8 @@ struct symbol *stack_peek(const stack *s);
 
 char *lookup_value_type_name(int type);
 
-struct array {
+struct array
+{
     int size;
     union s_val *items;
 };
@@ -82,12 +83,16 @@ struct context
     enum scope_type scope;
     int index;
 };
+enum symbol_err
+{
+    SYMBOL_ALREADY_DEFINED,
+};
 
 int symbol_is_visible(struct symbol *s);
 
 struct symbol *symbol_get(char *name);
 
-struct symbol *symbol_add(char *name, struct symbol *s);
+struct symbol *symbol_add(char *name, struct symbol *s, enum symbol_err *errors);
 
 struct symbol_table_entry *scope_start(enum scope_type scope);
 

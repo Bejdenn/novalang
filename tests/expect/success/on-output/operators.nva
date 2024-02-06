@@ -1,29 +1,37 @@
 // string concat
 string: str;
 string = "There are " + 2 + " dogs.";
+print("string: " + string);
 
 number: int;
 number = 2 + 2;
+print("number: " + number);
 
 x := 1;
 y := 2;
 boolean: bool;
+print("x: " + x + ", y: " + y);
 
 // equals
 boolean = "Hallo" == "Hallo";
+print("Hallo == Hallo: " + boolean);
 
 // not equal
 boolean = "1" != "Hallo";
+print("1 == Hallo: " + boolean);
 
 // less than
 boolean = x < y;
+print("x < y: " + boolean);
 
 // greater than
 boolean = x > y;
+print("x > y: " + boolean);
 
 // less than or equal
 boolean = x <= y;
+print("x <= y: " + boolean);
 
 // greater than or equal
 boolean = x >= y;
-
+print("x >= y: " + boolean);

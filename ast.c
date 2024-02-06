@@ -294,8 +294,19 @@ struct ast *ast_newnode_decl(char *sym_name, enum value_type type)
     s->type = type;
     s->val = malloc(sizeof(union s_val));
 
-    // TODO pass error buffer to symbol_add and print errors here
-    a->symbol = symbol_add(sym_name, s);
+    enum symbol_err errors;
+    struct symbol *symbol = symbol_add(sym_name, s, &errors);
+    if (symbol == NULL)
+    {
+        char str[100];
+
+        if ((errors | SYMBOL_ALREADY_DEFINED) == SYMBOL_ALREADY_DEFINED)
+        {
+            sprintf(str, "%d: Symbol '%s' is already declared\n", yylineno, sym_name);
+            add_syntax_err(str);
+        }
+    }
+    a->symbol = symbol;
 
     return (struct ast *)a;
 }

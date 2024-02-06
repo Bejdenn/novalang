@@ -1,3 +1,4 @@
+// it is not possible to access a symbol from an inner scope
 if true {
     inner := "inner";
 }

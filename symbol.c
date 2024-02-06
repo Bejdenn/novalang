@@ -102,7 +102,7 @@ struct symbol *symbol_get(char *name)
     return NULL;
 }
 
-struct symbol *symbol_add(char *name, struct symbol *s)
+struct symbol *symbol_add(char *name, struct symbol *s, enum symbol_err *errors)
 {
     s->level = context.level;
     s->scope = context.scope;
@@ -111,14 +111,9 @@ struct symbol *symbol_add(char *name, struct symbol *s)
     if (sym)
     {
         int local = (s->scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE && (context.scope & S_LOCAL_SCOPE) == S_LOCAL_SCOPE;
-        int can_be_shadowed = (s->scope & S_GLOBAL_SCOPE) == S_GLOBAL_SCOPE && (context.scope & S_FUNCTION_SCOPE) == S_FUNCTION_SCOPE;
+        int can_be_shadowed = (sym->scope & S_GLOBAL_SCOPE) == S_GLOBAL_SCOPE && (context.scope & S_FUNCTION_SCOPE) == S_FUNCTION_SCOPE;
 
-        if (!local && !can_be_shadowed && symbol_is_visible(sym) && symbol_is_visible(s))
-        {
-            fprintf(stderr, "redeclaration of '%s'", name);
-            exit(1);
-        }
-        else
+        if (local || can_be_shadowed || !symbol_is_visible(sym))
         {
             for (int i = 0; i < TBL_SIZE; i++)
             {
@@ -128,6 +123,11 @@ struct symbol *symbol_add(char *name, struct symbol *s)
                     return symbol_get(name);
                 }
             }
+        }
+        else
+        {
+            *errors = SYMBOL_ALREADY_DEFINED;
+            return NULL;
         }
     }
     else

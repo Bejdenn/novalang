@@ -1,0 +1,6 @@
+// as the shorthand variable initialization implicitely
+// defines a new variable, redeclarations are also not allowed
+x: int;
+x = 1;
+
+x := "Hello";
