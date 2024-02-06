@@ -423,16 +423,16 @@ struct ast *ast_newnode_index(char *sym_name, struct ast *index)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_fn_call(char *fn_name, struct ast *args)
+struct ast *ast_newnode_fn_call(char *fn_name, enum fn_ns ns, struct ast *args)
 {
     struct fn_call *a = malloc(sizeof(struct fn_call));
     a->nodetype = USER_FUNCTION;
 
-    struct fn_symbol *fn = fn_get(fn_name);
+    struct fn_symbol *fn = fn_get(fn_name, ns);
     if (!fn)
     {
         char s[100];
-        sprintf(s, "%d: Unknown function '%s'\n", yylineno, fn_name);
+        sprintf(s, "%d: Unknown function '%s' in namespace '%d' \n", yylineno, fn_name, ns);
         add_syntax_err(s);
         a->type = T_UNKNOWN;
         return (struct ast *)a;
@@ -475,9 +475,9 @@ struct ast *ast_newnode_fn_call(char *fn_name, struct ast *args)
     return (struct ast *)a;
 }
 
-struct ast *ast_newnode_builtin_fn_call(char *fn_name, struct ast *args)
+struct ast *ast_newnode_builtin_fn_call(char *fn_name, enum fn_ns ns, struct ast *args)
 {
-    struct ast *a = ast_newnode_fn_call(fn_name, args);
+    struct ast *a = ast_newnode_fn_call(fn_name, ns, args);
     a->nodetype = BUILTIN;
     return a;
 }
@@ -551,7 +551,7 @@ struct ast *ast_newnode_fn_decl(struct fn_symbol *fn, struct ast *block)
 
 struct fn_symbol *function_signature(char *fn_name, struct ast *params, enum value_type type)
 {
-    struct fn_symbol *fn = fn_get(fn_name);
+    struct fn_symbol *fn = fn_get(fn_name, NS_GLOBAL);
     if (fn)
     {
         char s[100];
@@ -577,7 +577,7 @@ struct fn_symbol *function_signature(char *fn_name, struct ast *params, enum val
         pc--;
     }
 
-    return fn_add(fn_name, type, params_list, params_count);
+    return fn_add(fn_name, NS_GLOBAL, type, params_list, params_count);
 }
 
 struct ast *ast_newnode_pipe(struct ast *l, struct ast *r)
@@ -753,17 +753,17 @@ union s_val *ast_eval(struct ast *a)
     case BUILTIN:
     {
         struct fn_call *call = ((struct fn_call *)a);
-        if (strcmp(call->fn->name, "print") == 0)
+        if (strcmp(call->fn->name, "print") == 0 && call->fn->ns == NS_STR)
         {
             printf("%s\n", ast_eval(call->args->r)->str);
             break;
         }
-        else if (strcmp(call->fn->name, "print_int") == 0)
+        else if (strcmp(call->fn->name, "print") == 0 && call->fn->ns == NS_INT)
         {
             printf("%d\n", ast_eval(call->args->r)->num);
             break;
         }
-        else if (strcmp(call->fn->name, "read_int") == 0)
+        else if (strcmp(call->fn->name, "read") == 0 && call->fn->ns == NS_INT)
         {
             char line[128] = {0};
             if (fgets(line, sizeof(line), stdin))
@@ -776,7 +776,7 @@ union s_val *ast_eval(struct ast *a)
             }
             break;
         }
-        else if (strcmp(call->fn->name, "random_int") == 0)
+        else if (strcmp(call->fn->name, "random") == 0 && call->fn->ns == NS_INT)
         {
             struct timespec ts;
             if (clock_gettime(0, &ts) == -1)
@@ -792,7 +792,7 @@ union s_val *ast_eval(struct ast *a)
             v->num = (rand() % (upper - lower + 1)) + lower;
             break;
         }
-        else if (strcmp(call->fn->name, "read_ints") == 0)
+        else if (strcmp(call->fn->name, "read") == 0 && call->fn->ns == (NS_INT | NS_ARRAY))
         {
             char line[128] = {0};
             v->array = malloc(sizeof(struct array));
@@ -817,7 +817,7 @@ union s_val *ast_eval(struct ast *a)
             v->array->size = count;
             break;
         }
-        else if (strcmp(call->fn->name, "print_arr") == 0)
+        else if (strcmp(call->fn->name, "print") == 0 && call->fn->ns == (T_INT | NS_ARRAY))
         {
             struct array *array = ast_eval(call->args->r)->array;
             for (int i = 0; i < array->size; i++)
@@ -827,7 +827,7 @@ union s_val *ast_eval(struct ast *a)
             printf("\n");
             break;
         }
-        else if (strcmp(call->fn->name, "len") == 0)
+        else if (strcmp(call->fn->name, "len") == 0 && call->fn->ns == (T_INT | NS_ARRAY))
         {
             v->num = ast_eval(call->args->r)->array->size;
         }

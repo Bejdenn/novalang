@@ -186,11 +186,11 @@ struct symbol_table_entry *scope_end(enum scope_type type, struct symbol_table_e
     return current_table;
 }
 
-struct fn_symbol *fn_get(char *s)
+struct fn_symbol *fn_get(char *s, enum fn_ns ns)
 {
     for (int i = 0; i < TBL_SIZE; i++)
     {
-        if (fn_table[i].name && strcmp(fn_table[i].name, s) == 0)
+        if (fn_table[i].name && strcmp(fn_table[i].name, s) == 0 && fn_table[i].ns == ns)
             return &fn_table[i];
     }
 
@@ -214,7 +214,7 @@ void fn_table_init()
     s1->val = malloc(sizeof(union s_val));
 
     p[0] = s1;
-    fn_add("print", T_VOID, p, 1);
+    fn_add("print", NS_STR, T_VOID, p, 1);
 
     p = malloc(sizeof(struct symbol) * 1);
 
@@ -223,9 +223,9 @@ void fn_table_init()
     s1->val = malloc(sizeof(union s_val));
 
     p[0] = s1;
-    fn_add("print_int", T_VOID, p, 1);
+    fn_add("print", NS_INT, T_VOID, p, 1);
 
-    fn_add("read_int", T_INT, NULL, 0);
+    fn_add("read", NS_INT, T_INT, NULL, 0);
 
     p = malloc(sizeof(struct symbol) * 2);
 
@@ -239,11 +239,11 @@ void fn_table_init()
 
     p[0] = s1;
     p[1] = s2;
-    fn_add("random_int", T_INT, p, 2);
+    fn_add("random", NS_INT, T_INT, p, 2);
 
     p = malloc(sizeof(struct symbol) * 1);
 
-    fn_add("read_ints", T_INT | T_ARRAY, NULL, 0);
+    fn_add("read", NS_INT | NS_ARRAY, T_INT | T_ARRAY, NULL, 0);
 
     p = malloc(sizeof(struct symbol) * 2);
     s1 = malloc(sizeof(struct symbol) * 1);
@@ -251,7 +251,7 @@ void fn_table_init()
     s1->val = malloc(sizeof(union s_val));
 
     p[0] = s1;
-    fn_add("print_arr", T_VOID, p, 1);
+    fn_add("print", NS_INT | NS_ARRAY, T_VOID, p, 1);
 
     p = malloc(sizeof(struct symbol) * 1);
     s1 = malloc(sizeof(struct symbol) * 1);
@@ -259,12 +259,12 @@ void fn_table_init()
     s1->val = malloc(sizeof(union s_val));
 
     p[0] = s1;
-    fn_add("len", T_INT, p, 1);
+    fn_add("len", NS_INT | NS_ARRAY, T_INT, p, 1);
 }
 
-struct fn_symbol *fn_add(char *name, enum value_type return_type, struct symbol *params[], int params_count)
+struct fn_symbol *fn_add(char *name, enum fn_ns ns, enum value_type return_type, struct symbol *params[], int params_count)
 {
-    struct fn_symbol *fn = fn_get(name);
+    struct fn_symbol *fn = fn_get(name, ns);
     if (fn)
     {
         // As function declarations are only permitted in the global scope, the only thing to look out for are
@@ -277,6 +277,7 @@ struct fn_symbol *fn_add(char *name, enum value_type return_type, struct symbol 
         if (!fn_table[i].name)
         {
             fn_table[i].name = strdup(name);
+            fn_table[i].ns = ns;
             fn_table[i].return_type = return_type;
 
             if (params)

@@ -1,4 +1,4 @@
-print("Fibonacci sequence");
+str::print("Fibonacci sequence");
 
 fn fibonacci(n: int): int {
    when n < 2 {
@@ -11,12 +11,12 @@ fn fibonacci(n: int): int {
 i := 0;
 nterms := 10;
 for i < nterms {
-   print("i: " + i + ": " + fibonacci(i));
+   str::print("i: " + i + ": " + fibonacci(i));
    i = i + 1;
 }
 
-print("");
-print("Factorial sequence");
+str::print("");
+str::print("Factorial sequence");
 
 fn factorial(n: int): int {
    when n == 0 {
@@ -29,6 +29,6 @@ fn factorial(n: int): int {
 i = 1;
 nterms = 5;
 for i < nterms {
-   print("i: " + i + ": " + factorial(i));
+   str::print("i: " + i + ": " + factorial(i));
    i = i + 1;
 }

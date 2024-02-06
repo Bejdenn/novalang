@@ -1,5 +1,5 @@
-dog_count := read_int();
+dog_count := int::read();
 
-print("There are " + dog_count + " dogs.");
+str::print("There are " + dog_count + " dogs.");
 
-print("Are there dogs? " + (dog_count > 0));
+str::print("Are there dogs? " + (dog_count > 0));

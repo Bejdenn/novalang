@@ -3,4 +3,4 @@ if true {
     inner := "inner";
 }
 
-print(inner);
+str::print(inner);

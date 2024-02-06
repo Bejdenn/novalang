@@ -9,12 +9,12 @@ fn to_bool(s: str): bool {
 x := 1 * 3
     |> it + "2"
     |> it + 1;
-print(x);
+str::print(x);
 
 b := "true"
     |> to_bool(it)
     |> it == true;
 
 if b == true {
-    print("It works!");
+    str::print("It works!");
 }

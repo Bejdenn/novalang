@@ -1,11 +1,11 @@
-print("Welcome to the calculation trainer!");
-print("I will generate an arithmetic term and you will have to solve it.");
-print("The solution will be checked and I tell you if it was right or not.");
+str::print("Welcome to the calculation trainer!");
+str::print("I will generate an arithmetic term and you will have to solve it.");
+str::print("The solution will be checked and I tell you if it was right or not.");
 
-operand_1 := 10; // random_int(5, 10);
-operand_2 := 5; // random_int(5, 10);
+operand_1 := 10; // int::random(5, 10);
+operand_2 := 5; // int::random(5, 10);
 
-op_r := 1; // random_int(0, 1);
+op_r := 1; // int::random(0, 1);
 solution: int;
 op := when op_r == 0 {
     solution = operand_1 + operand_2;
@@ -20,10 +20,10 @@ op := when op_r == 0 {
    "/" 
 };
 
-print("What is the result of " + operand_1 + " " + op + " " + operand_2 + "?");
+str::print("What is the result of " + operand_1 + " " + op + " " + operand_2 + "?");
 
-for read_int() != solution {
-   print("No, try again!"); 
+for int::read() != solution {
+   str::print("No, try again!"); 
 }
 
-print("Yes, that is correct!");
+str::print("Yes, that is correct!");

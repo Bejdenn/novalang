@@ -30,7 +30,7 @@
 %token <str> ID STRING BUILTIN_FN
 %token <num> NUM TYPE
 %token <boolean> BOOL
-%token IF ELSE WHEN FOR FN
+%token IF ELSE WHEN FOR FN DOUBLE_COLON
 
 %type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration
 %type <a> VarAssignment BuiltInFnCall IfExpression IfStatement ForStatement 
@@ -85,8 +85,8 @@ ParamList: ParamList ',' Param { $$ = ast_newnode(ARG_LIST, $1, $3); }
 
 Param: ID ':' Type { $$ = ast_newnode_decl($1, $3); }
 
-FnCall: ID '(' ArgList ')' { $$ = ast_newnode_fn_call($1, $3); }
-    | ID '(' ')' { $$ = ast_newnode_fn_call($1, NULL); }
+FnCall: ID '(' ArgList ')' { $$ = ast_newnode_fn_call($1, NS_GLOBAL, $3); }
+    | ID '(' ')' { $$ = ast_newnode_fn_call($1, NS_GLOBAL, NULL); }
 
 ArgList: ArgList ',' Arg { $$ = ast_newnode(ARG_LIST, $1, $3); }
     | Arg { $$ = ast_newnode(ARG_LIST, NULL, $1); }
@@ -103,8 +103,8 @@ IfStatement: /* IF Expression '{' '}' { $$ = ast_newnode_flow(IF_STMT, $2, NULL,
 ForStatement: /* FOR Expression '{' '}' { $$ = ast_newnode_flow(FOR_STMT, $2, NULL, NULL);}
     |*/ FOR Expression StatementBlock { $$ = ast_newnode_flow(FOR_STMT, $2, $3, NULL); }
 
-BuiltInFnCall: BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin_fn_call($1, $3); }
-    | BUILTIN_FN '(' ')' { $$ = ast_newnode_builtin_fn_call($1, NULL); }
+BuiltInFnCall: Type DOUBLE_COLON BUILTIN_FN '(' ArgList ')' { $$ = ast_newnode_builtin_fn_call($3, $1, $5); }
+    | Type DOUBLE_COLON BUILTIN_FN '(' ')' { $$ = ast_newnode_builtin_fn_call($3, $1, NULL); }
 
 ShortVarDeclaration: ID ':' '=' Expression { ast_newnode_decl($1, T_UNKNOWN); $$ = ast_newnode_assign($1, $4); }
 

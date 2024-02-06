@@ -52,6 +52,8 @@ IDENTIFIER [a-zA-Z0-9_]+
 
 "|>" { return PIPE; }
 
+"::" {return DOUBLE_COLON; }
+
 "+" { yylval.num = ADD;   return yytext[0]; }
 "-" { yylval.num = MINUS; return yytext[0]; }
 "*" { yylval.num = MUL;   return yytext[0]; }
@@ -95,12 +97,9 @@ IDENTIFIER [a-zA-Z0-9_]+
     return BOOL;
 }
 
-"print"      |
-"print_int"  |
-"read_int"   |
-"random_int" | 
-"read_ints"  | 
-"print_arr"  |
+"print"  |
+"read"   |
+"random" | 
 "len" { yylval.str = strdup(yytext); return BUILTIN_FN; }
 
 {IDENTIFIER} { 

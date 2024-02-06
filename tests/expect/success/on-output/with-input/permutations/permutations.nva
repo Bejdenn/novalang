@@ -8,11 +8,11 @@ fn swap(a: int[], x: int, y:int): int[] {
 }
 
 input: int[];
-input = read_ints();
+input = int[]::read();
 
 fn permute(a: int[], l: int, r: int): void {
     if l == r {
-        print_arr(a);
+        int[]::print(a);
     } else {
         i := l;
         for i <= (r - 1) {
@@ -24,5 +24,5 @@ fn permute(a: int[], l: int, r: int): void {
    }
 }
 
-print("Permutations:");
-permute(input, 0, len(input));
+str::print("Permutations:");
+permute(input, 0, int[]::len(input));

@@ -187,9 +187,9 @@ struct ast *ast_newnode_ref(char *sym_name);
 
 struct ast* ast_newnode_index(char *sym_name, struct ast *index);
 
-struct ast *ast_newnode_builtin_fn_call(char *fn, struct ast *args);
+struct ast *ast_newnode_builtin_fn_call(char *fn, enum fn_ns ns, struct ast *args);
 
-struct ast *ast_newnode_fn_call(char *fn, struct ast *args);
+struct ast *ast_newnode_fn_call(char *fn, enum fn_ns ns, struct ast *args);
 
 struct ast *ast_newnode_fn_decl(struct fn_symbol *fn_sign, struct ast *block);
 

@@ -4,19 +4,19 @@ x: int[];
 // array literals
 x = [1, 2, 3];
 
-print_int(x[0]);
+int::print(x[0]);
 
 // access array values by index
 z := x[2];
 
-print("z: " + z);
+str::print("z: " + z);
 
 fn ok(arr: int[]): void {
     arr[0] = 200;
 }
 
 ok(x);
-print_int(x[0]);
+int::print(x[0]);
 
 x[0] = 99;
-print_int(x[0]);
+int::print(x[0]);

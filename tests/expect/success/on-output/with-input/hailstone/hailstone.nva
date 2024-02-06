@@ -1,16 +1,16 @@
-n := read_int();
+n := int::read();
 
 steps := 0;
-print_int(n);
+int::print(n);
 for n != 1 {
     n = when (n mod 2) == 0 {
         n / 2
     } else {
         n * 3 + 1
     };
-    print_int(n);
+    int::print(n);
     
     steps = steps + 1; 
 }
 
-print("steps: " + steps);
+str::print("steps: " + steps);

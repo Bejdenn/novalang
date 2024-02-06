@@ -3,7 +3,7 @@ y := 24;
 
 // if statement + no else
 if x < 2 {
-   print("If statement without else branch"); 
+   str::print("If statement without else branch"); 
 }
 
 // if statement without statements in body (is optimized out)
@@ -11,18 +11,18 @@ if x < 2 {
 
 // if statement
 if x > 2 {
-    print("Branch on true");
+   str::print("Branch on true");
 } else {
-    print("Branch on else");
+   str::print("Branch on else");
 }
 
 // if statements can contain more than one branch
 if x > 22 {
-    print("First branch");
+    str::print("First branch");
 } else if x < 15 {
-    print("Second branch");
+    str::print("Second branch");
 } else {
-    print("Last branch");
+    str::print("Last branch");
 }
 
 // if expression (else branch is mandatory) 
@@ -43,10 +43,10 @@ n = when x > y {
     0
 };
 
-print("n: " + n);
+str::print("n: " + n);
 
 i := 0;
 for i < 3 {
-    print("i: " + i);
+    str::print("i: " + i);
     i = i + 1;
 } 
