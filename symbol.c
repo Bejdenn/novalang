@@ -239,25 +239,23 @@ void fn_table_init()
 
     p = malloc(sizeof(struct symbol) * 1);
 
-    s1 = malloc(sizeof(struct symbol) * 1);
-    s1->type = T_INT | T_ARRAY;
-    s1->val = malloc(sizeof(union s_val));
-
-    p[0] = s1;
-    fn_add("read_ints", T_INT, p, 1);
+    fn_add("read_ints", T_INT | T_ARRAY, NULL, 0);
 
     p = malloc(sizeof(struct symbol) * 2);
     s1 = malloc(sizeof(struct symbol) * 1);
     s1->type = T_INT | T_ARRAY;
     s1->val = malloc(sizeof(union s_val));
 
-    s2 = malloc(sizeof(struct symbol) * 1);
-    s2->type = T_INT;
-    s2->val = malloc(sizeof(union s_val));
+    p[0] = s1;
+    fn_add("print_arr", T_VOID, p, 1);
+
+    p = malloc(sizeof(struct symbol) * 1);
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_INT | T_ARRAY;
+    s1->val = malloc(sizeof(union s_val));
 
     p[0] = s1;
-    p[1] = s2;
-    fn_add("print_arr", T_VOID, p, 2);
+    fn_add("len", T_INT, p, 1);
 }
 
 struct fn_symbol *fn_add(char *name, enum value_type return_type, struct symbol *params[], int params_count)

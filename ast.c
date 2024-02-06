@@ -192,6 +192,17 @@ enum value_type op_get_type(int lineno, enum op op, struct ast *l, struct ast *r
     return T_UNKNOWN;
 }
 
+void copy_array(union s_val *dest, union s_val *src)
+{
+    dest->array = malloc(sizeof(struct array));
+    dest->array->size = src->array->size;
+    dest->array->items = malloc(sizeof(union s_val) * dest->array->size);
+    for (int i = 0; i < dest->array->size; i++)
+    {
+        dest->array->items[i] = src->array->items[i];
+    }
+}
+
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r)
 {
     struct ast *a = malloc(sizeof(struct ast));
@@ -603,13 +614,28 @@ union s_val *ast_eval(struct ast *a)
     case DECLARATION:
         return v;
     case ASSIGNMENT:
-        *((struct symassign *)a)->symbol->val = *ast_eval(((struct symassign *)a)->v);
+        // printf("symassign: %p\n", ((struct symassign *)a)->symbol->val);
+        v = ast_eval(((struct symassign *)a)->v);
+        *((struct symassign *)a)->symbol->val = *v;
+
+        // arrays have to be copied
+        if (((struct symassign *)a)->symbol->type & T_ARRAY)
+        {
+            copy_array(((struct symassign *)a)->symbol->val, v);
+        }
         break;
     case INDEX_ASSIGNMENT:
     {
         struct indexassign *i = (struct indexassign *)a;
         int index = ast_eval(i->index)->num;
-        i->symbol->val->array[index] = *ast_eval(i->v);
+
+        if (index >= i->symbol->val->array->size)
+        {
+            printf("Index out of bounds\n");
+            exit(1);
+        }
+
+        i->symbol->val->array->items[index] = *ast_eval(i->v);
         break;
     }
     case T_INT:
@@ -630,11 +656,13 @@ union s_val *ast_eval(struct ast *a)
             size++;
         }
 
-        v->array = malloc(sizeof(union s_val) * size);
+        v->array = malloc(sizeof(struct array));
+        v->array->items = malloc(sizeof(union s_val) * size);
+        v->array->size = size;
         int i = size - 1;
         for (struct ast *item = arr->items; item != NULL; item = item->l)
         {
-            v->array[i--] = *ast_eval(item->r);
+            v->array->items[i] = *ast_eval(item->r);
         }
         break;
     }
@@ -644,7 +672,7 @@ union s_val *ast_eval(struct ast *a)
     {
         struct symindex *i = (struct symindex *)a;
         int index = ast_eval(i->index)->num;
-        return &i->symbol->val->array[index];
+        return &i->symbol->val->array->items[index];
     }
     case ADD:
     case MINUS:
@@ -756,7 +784,8 @@ union s_val *ast_eval(struct ast *a)
         else if (strcmp(call->fn->name, "read_ints") == 0)
         {
             char line[128] = {0};
-            union s_val *array = ast_eval(call->args->r)->array;
+            v->array = malloc(sizeof(struct array));
+            v->array->items = malloc(sizeof(union s_val));
             int count = 0;
             if (fgets(line, sizeof(line), stdin))
             {
@@ -764,28 +793,32 @@ union s_val *ast_eval(struct ast *a)
                 char *token = strtok(line, " ");
                 while (token != NULL)
                 {
-                    if (1 != sscanf(token, "%d", &array[i++].num))
+                    if (1 != sscanf(token, "%d", &v->array->items[i++].num))
                     {
                         printf("Invalid input\n");
                         exit(1);
                     }
                     count++;
+                    v->array->items = realloc(v->array->items, sizeof(union s_val) * (count + 1));
                     token = strtok(NULL, " ");
                 }
             }
-            v->num = count;
+            v->array->size = count;
             break;
         }
         else if (strcmp(call->fn->name, "print_arr") == 0)
         {
-            int count = ast_eval(call->args->r)->num;
-            union s_val *array = ast_eval(call->args->l->r)->array;
-            for (int i = 0; i < count; i++)
+            struct array *array = ast_eval(call->args->r)->array;
+            for (int i = 0; i < array->size; i++)
             {
-                printf("%d ", array[i].num);
+                printf("%d ", array->items[i].num);
             }
             printf("\n");
             break;
+        }
+        else if (strcmp(call->fn->name, "len") == 0)
+        {
+            v->num = ast_eval(call->args->r)->array->size;
         }
         else
         {
@@ -805,9 +838,18 @@ union s_val *ast_eval(struct ast *a)
 
         for (struct ast *arg = call->args; arg != NULL && call->fn->params != NULL; arg = arg->l)
         {
-            params_buf[params_count - 1] = call->fn->params[params_count - 1]->val;
-            union s_val *val = ast_eval(arg->r);
-            call->fn->params[params_count - 1]->val = val;
+            struct symbol *param = call->fn->params[params_count - 1];
+            union s_val *arg_val = ast_eval(arg->r);
+
+            params_buf[params_count - 1] = param->val;
+            param->val = malloc(sizeof(*params_buf[params_count - 1]));
+            *param->val = *arg_val;
+
+            if (param->type & T_ARRAY)
+            {
+                copy_array(param->val, arg_val);
+            }
+
             params_count--;
         }
 

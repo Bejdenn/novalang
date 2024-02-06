@@ -45,12 +45,17 @@ struct symbol *stack_peek(const stack *s);
 
 char *lookup_value_type_name(int type);
 
+struct array {
+    int size;
+    union s_val *items;
+};
+
 union s_val
 {
     int num;
     char *str;
     int boolean;
-    union s_val *array;
+    struct array *array;
 };
 
 struct fn_symbol

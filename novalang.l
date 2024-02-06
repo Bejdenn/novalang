@@ -100,7 +100,8 @@ IDENTIFIER [a-zA-Z0-9_]+
 "read_int"   |
 "random_int" | 
 "read_ints"  | 
-"print_arr" { yylval.str = strdup(yytext); return BUILTIN_FN; }
+"print_arr"  |
+"len" { yylval.str = strdup(yytext); return BUILTIN_FN; }
 
 {IDENTIFIER} { 
     yylval.str = strdup(yytext);
