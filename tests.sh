@@ -1,22 +1,31 @@
 #!/bin/bash
 
-success() {
-    echo " " "\e[32m$1\e[0m"
+__echo_color() {
+    printf "\033[1;%s%s\033[0m\n" "$1" "$2"
 }
 
-error() {
-    echo " " "\e[31m$1\e[0m"
-    echo "  "$2
+__echo_green() {
+    __echo_color "32m" "$1"
+}
+
+__echo_red() {
+    __echo_color "31m" "$1"
+}
+
+__print_test_success() {
+    __echo_green "✔ $1"
+}
+
+__print_test_error() {
+    __echo_red "✘ $1."
 }
 
 echo "Test: zero exit code"
 for f in $(find tests/expect/success -not -path "tests/expect/success/on-output/*" -name "*.nva" -type f | sort); do
-    out=$(./novalang $f 2>&1 1>/dev/null)
-
-    if [ $? -eq 0 ]; then
-        success $f
+    if ./novalang "$f" 1>/dev/null 2>&1; then
+        __print_test_success "$f"
     else
-        error $f $out
+        __print_test_error "$f"
     fi
 done
 
@@ -24,12 +33,10 @@ echo
 
 echo "Test: zero exit code + correct output"
 for f in $(find tests/expect/success/on-output -not -path "tests/expect/success/on-output/with-input/*" -name "*.nva" -type f | sort); do
-    out=$(./novalang $f | diff ${f%.nva}.output -)
-
-    if [ $? -eq 0 ]; then
-        success $f
+    if ./novalang "$f" | diff "${f%.nva}".output -; then
+        __print_test_success "$f"
     else
-        error $f $out
+        __print_test_error "$f"
     fi
 done
 
@@ -37,12 +44,10 @@ echo
 
 echo "Test: zero exit code + correct output for input"
 for f in $(find tests/expect/success/on-output/with-input -name "*.nva" -type f | sort); do
-    out=$(./novalang $f <${f%.nva}.input | diff ${f%.nva}.output -)
-
-    if [ $? -eq 0 ]; then
-        success $f
+    if ./novalang "$f" <"${f%.nva}".input | diff "${f%.nva}".output -; then
+        __print_test_success "$f"
     else
-        error $f $out
+        __print_test_error "$f"
     fi
 done
 
@@ -50,12 +55,10 @@ echo
 
 echo "Test: non-zero exit code"
 for f in $(find tests/expect/error -not -path "tests/expect/error/on-output/*" -name "*.nva" -type f | sort); do
-    out=$(./novalang $f 2>&1 1>/dev/null)
-
-    if [ $? -ne 0 ]; then
-        success $f
+    if ./novalang "$f" 1>/dev/null; then
+        __print_test_success "$f"
     else
-        error $f
+        __print_test_error "$f"
     fi
 done
 
@@ -63,11 +66,9 @@ echo
 
 echo "Test: non-zero exit code + correct output"
 for f in $(find tests/expect/error/on-output -name "*.nva" -type f | sort); do
-    out=$(./novalang $f 2>&1 | diff ${f%.nva}.output -)
-
-    if [ $? -ne 0 ]; then
-        success $f
+    if ./novalang "$f" 2>&1 | diff "${f%.nva}".output -; then
+        __print_test_success "$f"
     else
-        error $f $out
+        __print_test_error "$f"
     fi
 done
