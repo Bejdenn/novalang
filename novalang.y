@@ -65,6 +65,7 @@ Statement: IfStatement
     | VarDeclaration ';'
     | VarAssignment ';'
     | BuiltInFnCall ';'
+    | Pipe ';'
 
 FnDeclaration: FN FnScope FnSignature '{' Statements Expression '}'
                     { $$ = ast_newnode_fn_decl($3, ast_newnode_block($5, $6, $2, S_FUNCTION_SCOPE)); }
