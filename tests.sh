@@ -17,7 +17,7 @@ __print_test_success() {
 }
 
 __print_test_error() {
-    __echo_red "✘ $1."
+    __echo_red "✘ $1"
 }
 
 echo "Test: zero exit code"
@@ -55,7 +55,7 @@ echo
 
 echo "Test: non-zero exit code"
 for f in $(find tests/expect/error -not -path "tests/expect/error/on-output/*" -name "*.nva" -type f | sort); do
-    if ./novalang "$f" 1>/dev/null; then
+    if ! ./novalang "$f" 1>/dev/null 2>&1; then
         __print_test_success "$f"
     else
         __print_test_error "$f"
