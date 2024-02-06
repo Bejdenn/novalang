@@ -217,6 +217,35 @@ void fn_table_init()
     fn_add("print", NS_STR, T_VOID, p, 1);
 
     p = malloc(sizeof(struct symbol) * 1);
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_STR;
+    s1->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    fn_add("upcase", NS_STR, T_STR, p, 1);
+
+    p = malloc(sizeof(struct symbol) * 1);
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_STR;
+    s1->val = malloc(sizeof(union s_val));
+
+    s2 = malloc(sizeof(struct symbol) * 1);
+    s2->type = T_STR;
+    s2->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    p[1] = s2;
+    fn_add("split", NS_STR, T_STR | T_ARRAY, p, 2);
+
+    p = malloc(sizeof(struct symbol) * 1);
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_STR | T_ARRAY;
+    s1->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
+    fn_add("print", NS_STR | NS_ARRAY, T_VOID, p, 1);
+
+    p = malloc(sizeof(struct symbol) * 1);
 
     s1 = malloc(sizeof(struct symbol) * 1);
     s1->type = T_INT;

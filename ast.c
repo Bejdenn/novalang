@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <ctype.h>
 
 char *error_buf[100];
 int error_buf_ptr = 0;
@@ -756,6 +757,42 @@ union s_val *ast_eval(struct ast *a)
         if (strcmp(call->fn->name, "print") == 0 && call->fn->ns == NS_STR)
         {
             printf("%s\n", ast_eval(call->args->r)->str);
+            break;
+        }
+        else if (strcmp(call->fn->name, "upcase") == 0 && call->fn->ns == NS_STR)
+        {
+            v->str = strdup(ast_eval(call->args->r)->str);
+            for (int i = 0; i < strlen(v->str); i++)
+            {
+                v->str[i] = toupper(v->str[i]);
+            }
+            break;
+        }
+        else if (strcmp(call->fn->name, "split") == 0 && call->fn->ns == NS_STR)
+        {
+            struct array *array = malloc(sizeof(struct array));
+            array->items = malloc(sizeof(union s_val));
+            int count = 0;
+            char *token = strtok(ast_eval(call->args->l->r)->str, ast_eval(call->args->r)->str);
+            while (token != NULL)
+            {
+                array->items[count].str = strdup(token);
+                count++;
+                array->items = realloc(array->items, sizeof(union s_val) * (count + 1));
+                token = strtok(NULL, ast_eval(call->args->r)->str);
+            }
+            array->size = count;
+            v->array = array;
+            break;
+        }
+        else if (strcmp(call->fn->name, "print") == 0 && call->fn->ns == (NS_STR | NS_ARRAY))
+        {
+            struct array *array = ast_eval(call->args->r)->array;
+            for (int i = 0; i < array->size; i++)
+            {
+                printf("%s ", array->items[i].str);
+            }
+            printf("\n");
             break;
         }
         else if (strcmp(call->fn->name, "print") == 0 && call->fn->ns == NS_INT)

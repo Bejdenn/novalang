@@ -100,7 +100,9 @@ IDENTIFIER [a-zA-Z0-9_]+
 "print"  |
 "read"   |
 "random" | 
-"len" { yylval.str = strdup(yytext); return BUILTIN_FN; }
+"len"    |
+"upcase" | 
+"split" { yylval.str = strdup(yytext); return BUILTIN_FN; }
 
 {IDENTIFIER} { 
     yylval.str = strdup(yytext);

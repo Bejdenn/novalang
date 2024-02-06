@@ -18,3 +18,10 @@ b := "true"
 if b == true {
     str::print("It works!");
 }
+
+// nested: str[]::print(str::split(str::upcase("NovaLang is cool"), " "));
+
+"NovaLang is cool" 
+    |> str::upcase(it)
+    |> str::split(it, " ")
+    |> str[]::print(it);
