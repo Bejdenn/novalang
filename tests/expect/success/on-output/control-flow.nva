@@ -42,10 +42,10 @@ n = when {
     default -> 0
 };
 
-str::print("n: " + n);
+str::print("n: " + str(n));
 
 i := 0;
 for i < 3 {
-    str::print("i: " + i);
+    str::print("i: " + str(i));
     i = i + 1;
 } 

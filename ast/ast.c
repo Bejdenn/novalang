@@ -39,12 +39,6 @@ void add_syntax_err(char *err)
     error_buf[error_buf_ptr++] = strdup(err);
 }
 
-void do_arithm_op(union s_val *, int, struct ast *);
-
-void do_cmp(union s_val *, int, struct ast *);
-
-enum value_type op_get_type(int, enum op, struct ast *, struct ast *);
-
 char *lookup_op(int op)
 {
     switch (op)
@@ -112,73 +106,222 @@ char *str_concat(char *s1, char *s2)
     return s;
 }
 
-enum value_type op_get_type(int lineno, enum op op, struct ast *l, struct ast *r)
+union s_val *add(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->num = l->num + r->num;
+    return v;
+}
+
+union s_val *concat(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->str = str_concat(l->str, r->str);
+    return v;
+}
+
+union s_val *sub(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->num = l->num - r->num;
+    return v;
+}
+
+union s_val *mul(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->num = l->num * r->num;
+    return v;
+}
+
+union s_val *divison(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->num = l->num / r->num;
+    return v;
+}
+
+union s_val *mod(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->num = l->num % r->num;
+    return v;
+}
+
+union s_val *eq_num(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->num == r->num;
+    return v;
+}
+
+union s_val *eq_str(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = strcmp(l->str, r->str) == 0;
+    return v;
+}
+
+union s_val *eq_bool(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->boolean == r->boolean;
+    return v;
+}
+
+union s_val *neq_num(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->num != r->num;
+    return v;
+}
+
+union s_val *neq_str(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = strcmp(l->str, r->str) != 0;
+    return v;
+}
+
+union s_val *neq_bool(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->boolean != r->boolean;
+    return v;
+}
+
+union s_val *grt(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->num > r->num;
+    return v;
+}
+
+union s_val *less(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->num < r->num;
+    return v;
+}
+
+union s_val *grt_or_eq(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->num >= r->num;
+    return v;
+}
+
+union s_val *less_or_eq(union s_val *l, union s_val *r)
+{
+    union s_val *v = malloc(sizeof(union s_val));
+    v->boolean = l->num <= r->num;
+    return v;
+}
+
+binary_op get_op(int lineno, enum op op, struct ast *l, struct ast *r, enum value_type *type)
 {
     switch (op)
     {
     case ADD:
-        switch (l->type)
+        if (l->type == T_INT && r->type == T_INT)
         {
-        case T_INT:
-            switch (r->type)
-            {
-            case T_INT:
-                return T_INT;
-            case T_STR:
-                return T_STR;
-            default:
-                break;
-            }
-            break;
-        case T_STR:
-            switch (r->type)
-            {
-            case T_INT:
-                return T_STR;
-            case T_STR:
-                return T_STR;
-            case T_BOOL:
-                return T_STR;
-            default:
-                break;
-            }
-            break;
-        case T_BOOL:
-            switch (r->type)
-            {
-            case T_STR:
-                return T_STR;
-            default:
-                break;
-            }
-            break;
-        default:
-            break;
+            *type = T_INT;
+            return add;
+        }
+        else if (l->type == T_STR && r->type == T_STR)
+        {
+            *type = T_STR;
+            return concat;
         }
         break;
     case MINUS:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            *type = T_INT;
+            return sub;
+        }
+        break;
     case MOD:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            *type = T_INT;
+            return mod;
+        }
+        break;
     case MUL:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            *type = T_INT;
+            return mul;
+        }
+        break;
     case DIV:
         if (l->type == T_INT && r->type == T_INT)
         {
-            return T_INT;
+            *type = T_INT;
+            return divison;
         }
         break;
     case EQ:
-    case N_EQ:
-        if (l->type == r->type)
+        if (l->type == T_INT && r->type == T_INT)
         {
-            return T_BOOL;
+            *type = T_BOOL;
+            return eq_num;
+        }
+        else if (l->type == T_STR && r->type == T_STR)
+        {
+            *type = T_BOOL;
+            return eq_str;
+        }
+        else if (l->type == T_BOOL && r->type == T_BOOL)
+        {
+            *type = T_BOOL;
+            return eq_bool;
+        }
+        break;
+    case N_EQ:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            *type = T_BOOL;
+            return neq_num;
+        }
+        else if (l->type == T_STR && r->type == T_STR)
+        {
+            *type = T_BOOL;
+            return neq_str;
+        }
+        else if (l->type == T_BOOL && r->type == T_BOOL)
+        {
+            *type = T_BOOL;
+            return neq_bool;
         }
         break;
     case GRT:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            *type = T_BOOL;
+            return grt;
+        }
+        break;
     case LESS:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            *type = T_BOOL;
+            return less;
+        }
+        break;
     case GRT_OR_EQ:
+        if (l->type == T_INT && r->type == T_INT)
+        {
+            *type = T_BOOL;
+            return grt_or_eq;
+        }
+        break;
     case LESS_OR_EQ:
         if (l->type == T_INT && r->type == T_INT)
         {
-            return T_BOOL;
+            *type = T_BOOL;
+            return less_or_eq;
         }
         break;
     default:
@@ -190,7 +333,7 @@ enum value_type op_get_type(int lineno, enum op op, struct ast *l, struct ast *r
     sprintf(s, "%d: Operator '%s' is not supported for '%s and '%s'\n", lineno, lookup_op(op),
             lookup_value_type_name(l->type), lookup_value_type_name(r->type));
     add_syntax_err(s);
-    return T_UNKNOWN;
+    return NULL;
 }
 
 void copy_array(union s_val *dest, union s_val *src)
@@ -215,17 +358,29 @@ struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r)
     return a;
 }
 
+struct ast *ast_newnode_cast(enum value_type cast_to, struct ast *expr)
+{
+    struct cast *a = malloc(sizeof(struct cast));
+    a->nodetype = CAST;
+    a->lineno = yylineno;
+    a->cast_to = cast_to;
+    a->expr = expr;
+    return (struct ast *)a;
+}
+
 struct ast *ast_newnode_op(enum op op, struct ast *l, struct ast *r)
 {
-    struct ast *a = malloc(sizeof(struct ast));
+    struct opnode *a = malloc(sizeof(struct opnode));
 
     a->nodetype = op;
     a->lineno = yylineno;
     a->l = l;
     a->r = r;
-    a->type = op_get_type(a->lineno, op, l, r);
 
-    return a;
+    a->type = T_UNKNOWN;
+    a->fn = get_op(a->lineno, op, l, r, &a->type);
+
+    return (struct ast *)a;
 }
 
 struct ast *ast_newnode_num(int d)
@@ -656,6 +811,17 @@ union s_val *ast_eval(struct ast *a)
     case T_STR:
         v->str = ((struct strval *)a)->str;
         break;
+    case CAST:
+        switch (((struct cast *)a)->cast_to)
+        {
+        case T_STR:
+            v->str = to_string(((struct cast *)a)->expr->type, ast_eval(((struct cast *)a)->expr));
+            break;
+        default:
+            printf("Cannot cast to '%s'\n", lookup_value_type_name(((struct cast *)a)->cast_to));
+            exit(1);
+        }
+        break;
     case T_BOOL:
         v->boolean = ((struct boolval *)a)->boolean;
         break;
@@ -691,15 +857,14 @@ union s_val *ast_eval(struct ast *a)
     case MOD:
     case MUL:
     case DIV:
-        do_arithm_op(v, a->nodetype, a);
-        break;
     case EQ:
     case N_EQ:
     case GRT:
     case LESS:
     case GRT_OR_EQ:
     case LESS_OR_EQ:
-        do_cmp(v, a->nodetype, a);
+        struct opnode *op = ((struct opnode *)a);
+        *v = *(op->fn)(ast_eval(op->l), ast_eval(op->r));
         break;
     case IF_EXPR:
     {
@@ -987,118 +1152,4 @@ union s_val *ast_eval(struct ast *a)
     }
 
     return v;
-}
-
-void do_arithm_op(union s_val *v, int op, struct ast *a)
-{
-    union s_val *l_val = ast_eval(a->l);
-    union s_val *r_val = ast_eval(a->r);
-
-    switch (op)
-    {
-    case ADD:
-        switch (a->l->type)
-        {
-        case T_INT:
-            switch (a->r->type)
-            {
-            case T_INT:
-                v->num = l_val->num + r_val->num;
-                break;
-            case T_STR:
-                v->str = str_concat(to_string(a->l->type, l_val), r_val->str);
-                break;
-            default:
-                break;
-            }
-            break;
-        case T_STR:
-            switch (a->r->type)
-            {
-            case T_INT:
-                v->str = str_concat(l_val->str, to_string(a->r->type, r_val));
-                break;
-            case T_STR:
-                v->str = str_concat(l_val->str, r_val->str);
-                break;
-            case T_BOOL:
-                v->str = str_concat(l_val->str, to_string(a->r->type, r_val));
-                break;
-            default:
-                break;
-            }
-            break;
-        default:
-            break;
-        }
-        break;
-    case MINUS:
-        v->num = l_val->num - r_val->num;
-        break;
-    case MOD:
-        v->num = l_val->num % r_val->num;
-        break;
-    case MUL:
-        v->num = l_val->num * r_val->num;
-        break;
-    case DIV:
-        v->num = l_val->num / r_val->num;
-        break;
-    }
-}
-
-void do_cmp(union s_val *v, int op, struct ast *a)
-{
-    union s_val *l_val = ast_eval(a->l);
-    union s_val *r_val = ast_eval(a->r);
-
-    switch (op)
-    {
-    case EQ:
-        switch (a->l->type)
-        {
-        case T_INT:
-            v->boolean = l_val->num == r_val->num;
-            break;
-        case T_STR:
-            v->boolean = strcmp(l_val->str, r_val->str) == 0;
-            break;
-        case T_BOOL:
-            v->boolean = l_val->boolean == r_val->boolean;
-            break;
-        default:
-            break;
-        }
-        break;
-    case N_EQ:
-        switch (a->l->type)
-        {
-        case T_INT:
-            v->boolean = l_val->num != r_val->num;
-            break;
-        case T_STR:
-            v->boolean = strcmp(l_val->str, r_val->str) != 0;
-            break;
-        case T_BOOL:
-            v->boolean = l_val->boolean != r_val->boolean;
-            break;
-        default:
-            break;
-        }
-        break;
-    case GRT:
-        v->boolean = l_val->num > r_val->num;
-        break;
-    case LESS:
-        v->boolean = l_val->num < r_val->num;
-        break;
-    case GRT_OR_EQ:
-        v->boolean = l_val->num >= r_val->num;
-        break;
-    case LESS_OR_EQ:
-        v->boolean = l_val->num <= r_val->num;
-        break;
-    default:
-        break;
-    }
 }

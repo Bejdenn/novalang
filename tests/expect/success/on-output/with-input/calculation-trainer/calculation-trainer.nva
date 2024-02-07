@@ -23,7 +23,7 @@ op := when {
     default -> "/" 
 };
 
-str::print("What is the result of " + operand_1 + " " + op + " " + operand_2 + "?");
+str::print("What is the result of " + str(operand_1) + " " + op + " " + str(operand_2) + "?");
 
 for int::read() != solution {
    str::print("No, try again!"); 

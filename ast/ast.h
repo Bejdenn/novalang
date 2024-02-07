@@ -17,12 +17,13 @@ enum nodetype
     USER_FUNCTION,
     FN_BLOCK,
     INDEX,
-    INDEX_ASSIGNMENT
+    INDEX_ASSIGNMENT,
+    CAST,
 };
 
 enum op
 {
-    ADD = 15,
+    ADD = 17,
     MINUS,
     MUL,
     DIV,
@@ -40,6 +41,18 @@ struct ast
     int nodetype;
     int lineno;
     enum value_type type;
+    struct ast *l;
+    struct ast *r;
+};
+
+typedef union s_val *(*binary_op)(union s_val *, union s_val *);
+
+struct opnode
+{
+    int nodetype;
+    int lineno;
+    enum value_type type;
+    binary_op fn;
     struct ast *l;
     struct ast *r;
 };
@@ -68,7 +81,8 @@ struct boolval
     int boolean;
 };
 
-struct arrayval {
+struct arrayval
+{
     int nodetype;
     int lineno;
     enum value_type type;
@@ -165,6 +179,13 @@ struct block
     struct ast *expr;
 };
 
+struct cast {
+    int nodetype;
+    int lineno;
+    enum value_type cast_to;
+    struct ast *expr;
+};
+
 struct ast *ast_newnode(int nodetype, struct ast *l, struct ast *r);
 
 struct ast *ast_newnode_op(enum op op, struct ast *l, struct ast *r);
@@ -185,7 +206,7 @@ struct ast *ast_newnode_index_assign(char *sym_name, struct ast *index, struct a
 
 struct ast *ast_newnode_ref(char *sym_name);
 
-struct ast* ast_newnode_index(char *sym_name, struct ast *index);
+struct ast *ast_newnode_index(char *sym_name, struct ast *index);
 
 struct ast *ast_newnode_builtin_fn_call(char *fn, enum fn_ns ns, struct ast *args);
 
@@ -204,6 +225,8 @@ struct fn_symbol *function_signature(char *fn_name, struct ast *params, enum val
 struct ast *ast_newnode_ufn_call(char *fn_name, struct ast *args);
 
 struct ast *ast_newnode_pipe(struct ast *l, struct ast *r);
+
+struct ast *ast_newnode_cast(enum value_type cast_to, struct ast *expr);
 
 void ast_interpret(struct ast *);
 

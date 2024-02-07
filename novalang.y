@@ -133,6 +133,7 @@ SimpleExpression: '(' Expression ')' { $$ = $2; }
     | WhenExpression
     | BuiltInFnCall
     | FnCall
+    | TYPE '(' Expression ')' { $$ = ast_newnode_cast($1, $3); }
     | NUM { $$ = ast_newnode_num($1); }
     | STRING { $$ = ast_newnode_str($1); }
     | BOOL { $$ = ast_newnode_bool($1); }

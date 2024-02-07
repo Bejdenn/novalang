@@ -9,7 +9,7 @@ int::print(x[0]);
 // access array values by index
 z := x[2];
 
-str::print("z: " + z);
+str::print("z: " + str(z));
 
 fn ok(arr: int[]): void {
     arr[0] = 200;
