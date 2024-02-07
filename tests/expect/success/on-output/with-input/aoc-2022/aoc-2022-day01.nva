@@ -1,0 +1,26 @@
+input := str[]::read("tests/expect/success/on-output/with-input/aoc-2022/aoc-2022-day01.input");
+
+i := 0;
+
+max := 0;
+sum := 0;
+
+fn get_max(x: int, y:int): int {
+    when {
+        x < y   -> y,
+        default -> x
+    }
+}
+
+for i < str[]::len(input) {
+    sum = input[i] |> sum + int(it);
+
+    if input[i] == "" {
+        max = get_max(max, sum);
+        sum = 0;
+    }
+
+    i = i + 1;
+}
+
+str::print("max: " + str(max));
