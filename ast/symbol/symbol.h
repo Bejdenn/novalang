@@ -14,14 +14,6 @@ enum value_type
     T_ARRAY = 1 << 14
 };
 
-enum fn_ns {
-    NS_STR = T_STR,
-    NS_INT = T_INT,
-    NS_BOOL = T_BOOL,
-    NS_ARRAY = T_ARRAY,
-    NS_GLOBAL = T_ARRAY << 1,
-};
-
 enum scope_type
 {
     S_GLOBAL_SCOPE = 1 << 1,
@@ -67,15 +59,6 @@ union s_val
     struct array *array;
 };
 
-struct fn_symbol
-{
-    char *name;
-    enum fn_ns ns;
-    enum value_type return_type;
-    struct symbol **params;
-    int params_count;
-};
-
 struct symbol_table_entry
 {
     char *name;
@@ -106,13 +89,5 @@ struct symbol *symbol_add(char *name, struct symbol *s, enum symbol_err *errors)
 struct symbol_table_entry *scope_start(enum scope_type scope);
 
 struct symbol_table_entry *scope_end(enum scope_type scope, struct symbol_table_entry *previous_table);
-
-extern struct fn_symbol *fn_table;
-
-void fn_table_init();
-
-struct fn_symbol *fn_get(char *name, enum fn_ns ns);
-
-struct fn_symbol *fn_add(char *name, enum fn_ns ns, enum value_type return_type, struct symbol **params, int params_count);
 
 #endif // SYMBOL_H
