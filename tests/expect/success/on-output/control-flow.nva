@@ -25,22 +25,21 @@ if x > 22 {
     str::print("Last branch");
 }
 
-// if expression (else branch is mandatory) 
-n := when x > y {
-    111
-} else {
-    inner_scope: int;
-    inner_scope = 222;
-    inner_scope
+// when expression (default branch is mandatory) 
+n := when {
+    x > y -> 111,
+    default {
+        inner_scope: int;
+        inner_scope = 222;
+        inner_scope
+    }
 };
 
-// if expression may contain multiple else if branches
-n = when x > y {
-    1
-} else when x < y {
-    -1
-} else {
-    0
+// when expression may contain multiple branches
+n = when {
+    x > y   -> 1,
+    x < y   -> -1, 
+    default -> 0
 };
 
 str::print("n: " + n);

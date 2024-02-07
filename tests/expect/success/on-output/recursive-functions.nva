@@ -1,10 +1,9 @@
 str::print("Fibonacci sequence");
 
 fn fibonacci(n: int): int {
-   when n < 2 {
-      n
-   } else {
-      fibonacci(n - 1) + fibonacci(n - 2)
+   when {
+      n < 2 -> n,
+      default -> fibonacci(n - 1) + fibonacci(n - 2)
    }
 }
 
@@ -19,10 +18,9 @@ str::print("");
 str::print("Factorial sequence");
 
 fn factorial(n: int): int {
-   when n == 0 {
-      1
-   } else {
-      n * factorial(n - 1)
+   when {
+      n == 0  -> 1,
+      default -> n * factorial(n - 1)
    }
 }
 

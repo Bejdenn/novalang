@@ -3,10 +3,9 @@ n := int::read();
 steps := 0;
 int::print(n);
 for n != 1 {
-    n = when (n mod 2) == 0 {
-        n / 2
-    } else {
-        n * 3 + 1
+    n = when {
+        (n mod 2) == 0 -> n / 2,
+        default        -> n * 3 + 1
     };
     int::print(n);
     

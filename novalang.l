@@ -54,6 +54,8 @@ IDENTIFIER [a-zA-Z0-9_]+
 
 "::" {return DOUBLE_COLON; }
 
+"->" { return ARROW; }
+
 "+" { yylval.num = ADD;   return yytext[0]; }
 "-" { yylval.num = MINUS; return yytext[0]; }
 "*" { yylval.num = MUL;   return yytext[0]; }
@@ -77,6 +79,7 @@ IDENTIFIER [a-zA-Z0-9_]+
 "else" { return ELSE; }
 "when" { return WHEN; }
 "for"  { return FOR; }
+"default" {return DEFAULT; }
 
 "fn" { return FN; }
 

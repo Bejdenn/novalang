@@ -1,8 +1,7 @@
 fn to_bool(s: str): bool {
-    when s == "true" {
-        true
-    } else {
-        false
+    when {
+        s == "true" -> true,
+        default     -> false
     }
 }
 

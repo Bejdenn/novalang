@@ -30,12 +30,13 @@
 %token <str> ID STRING BUILTIN_FN
 %token <num> NUM TYPE
 %token <boolean> BOOL
-%token IF ELSE WHEN FOR FN DOUBLE_COLON
+%token IF ELSE WHEN FOR FN DOUBLE_COLON ARROW DEFAULT
 
 %type <a> Expression Statements Statement ShortVarDeclaration VarDeclaration
-%type <a> VarAssignment BuiltInFnCall IfExpression IfStatement ForStatement 
+%type <a> VarAssignment BuiltInFnCall WhenExpression IfStatement ForStatement 
 %type <a> FnDeclaration ParamList FnCall ArgList Arg ExpressionBlock
 %type <a> StatementBlock Param Pipe PipeBody SimpleExpression
+%type <a> WhenExpressionBranch
 %type <num> Type
 
 %type <fs> FnSignature
@@ -44,6 +45,7 @@
 
 %start Start
 
+%nonassoc ARROW
 %nonassoc <num> CMP
 %left PIPE 
 %left <num> '+' '-'
@@ -128,7 +130,7 @@ SimpleExpression: '(' Expression ')' { $$ = $2; }
     | SimpleExpression '/' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
     | SimpleExpression '+' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
     | SimpleExpression '-' SimpleExpression { $$ = ast_newnode_op($2, $1, $3); }
-    | IfExpression
+    | WhenExpression
     | BuiltInFnCall
     | FnCall
     | NUM { $$ = ast_newnode_num($1); }
@@ -144,10 +146,13 @@ Pipe: SimpleExpression PIPE  { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_
 PipeBody: SimpleExpression { $<st>$ = scope_start(S_LOCAL_SCOPE); ast_newnode_decl("it", ($1->type)); } { $<a>$ = ast_newnode_assign("it", $1); } PIPE PipeBody { $$ = ast_newnode_pipe($<a>3, $5); scope_end(S_LOCAL_SCOPE, $<st>2); }
     | SimpleExpression
 
-IfExpression: WHEN Expression ExpressionBlock ELSE IfExpression { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
-    | WHEN Expression ExpressionBlock ELSE ExpressionBlock { $$ = ast_newnode_flow(IF_EXPR, $2, $3, $5); }
+WhenExpression: WHEN '{' WhenExpressionBranch '}' { $$ = $3; }
 
-ExpressionBlock: BlockScope '{' Statements Expression '}' { $$ = ast_newnode_block($3, $4, $1, S_BLOCK_SCOPE); }
+WhenExpressionBranch: Expression ExpressionBlock ',' WhenExpressionBranch { $$ = ast_newnode_flow(IF_EXPR, $1, $2, $4); }
+    | Expression ExpressionBlock ',' DEFAULT ExpressionBlock { $$ = ast_newnode_flow(IF_EXPR, $1, $2, $5); }
+
+ExpressionBlock: BlockScope ARROW SimpleExpression { $$ = ast_newnode_block(NULL, $3, $1, S_BLOCK_SCOPE); }
+    | BlockScope '{' Statements Expression '}' { $$ = ast_newnode_block($3, $4, $1, S_BLOCK_SCOPE); }
     | BlockScope '{' Expression '}' { $$ = ast_newnode_block(NULL, $3, $1, S_BLOCK_SCOPE); }
 
 BlockScope: %empty { $$ = scope_start(S_BLOCK_SCOPE); }

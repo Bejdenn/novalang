@@ -7,17 +7,20 @@ operand_2 := 5; // int::random(5, 10);
 
 op_r := 1; // int::random(0, 1);
 solution: int;
-op := when op_r == 0 {
-    solution = operand_1 + operand_2;
-    "+"
-} else when op_r == 1 {
-    solution = operand_1 - operand_2;
-    "-"
-} else when op_r == 2 {
-    solution = operand_1 * operand_2;
-    "*"
-} else {
-   "/" 
+op := when {
+    op_r == 0 {
+        solution = operand_1 + operand_2;
+        "+"
+    }, 
+    op_r == 1 {
+        solution = operand_1 - operand_2;
+        "-"
+    },  
+    op_r == 2 {
+        solution = operand_1 * operand_2;
+        "*"
+    }, 
+    default -> "/" 
 };
 
 str::print("What is the result of " + operand_1 + " " + op + " " + operand_2 + "?");
