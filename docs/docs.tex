@@ -1,16 +1,39 @@
 \documentclass[conference]{IEEEtran}
-\usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
 
-\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\usepackage{listings}
+
+\lstset{basicstyle=\footnotesize, captionpos=b, breaklines=true, showstringspaces=false, tabsize=2, frame=lines, numbers=left, numberstyle=\tiny, xleftmargin=2em, framexleftmargin=2em}
+
+% make lstinline be normalsize but keep displayed listings small
+\makeatletter
+\lstdefinestyle{mystyle}{
+  basicstyle=%
+    \ttfamily
+    \lst@ifdisplaystyle\scriptsize\fi
+}
+\makeatother
+
+\lstset{
+	language=C,
+	style = mystyle,
+	basicstyle=\ttfamily\scriptsize,
+	keywordstyle=\bfseries\ttfamily,
+	commentstyle=\color{gray}\ttfamily,
+	emphstyle={\color{Purple!90!black}},
+	tabsize=4,
+	morekeywords={fn,when},
+	emph={},
+	showstringspaces=false,
+}
+
 \begin{document}
 
-\title{NovaLang, an example language to test the world of programming language building}
+\title{NovaLang: a simple, interpreted language}
 
 \author{\IEEEauthorblockN{Dennis Bejze}}
 
@@ -18,8 +41,220 @@
 
 \begin{abstract}
     As part of the study exam in the course 'Compiler Construction' I had to develop my own programming language.
-    This paper describes the language NovaLang, which I developed for this purpose.
-    It consists of the required parts such as a lexer, parser and code generator.
+    This paper describes the language \emph{NovaLang}, which I developed for this purpose.
+    NovaLang is an interpreted language that also has a simple type system.
+    The interpreter performs syntax and type analysis before actually performing the interpretation.
+    As the requirements have specified, the language is built using the tools \emph{Bison} and \emph{Flex}.
 \end{abstract}
 
+\section{Components of a source file}
+
+Source files in NovaLang follow usual principles of scripting languages by starting the interpretation from the top of the file.
+As the language has no concept of packages, a single source file is the only unit of interpretation. \footnote{However, there are several built-in functions available.}
+
+\subsection{Comments}
+
+There are only single-line comments, that can be started with the \texttt{//} characters.
+
+\subsection{Semicolons}
+
+Semicolons are used to separate statements.
+They are not required for single expressions as last parts of a block (see Sec.~\ref{sec:functions}, Sec.~\ref{sec:control-flow}).
+
+\subsection{Identifiers}
+
+Identifiers are sequences of letters (either upper or lower case), digits and underscores.
+Every identifier that is not a keyword is considered to be a variable name.
+Digits may be first characters in identifiers, which most programming languages do not allow. \footnote{But to be honest, this is not necessarily a good idea - I just did not had a conflict with this in development.}
+
+\subsection{Keywords}
+
+The following keywords are reserved and cannot be used as identifiers:
+\begin{verbatim}
+if   else  for   when  default  fn  mod
+\end{verbatim}
+
+\subsection{Operators}
+
+The following operators are supported:
+\begin{verbatim}
++  -  *   /   ==  !=   :    =  <  >
+<=  >=  |>  [ ]  ->
+\end{verbatim}
+
+\subsection{Literals}
+
+NovaLang supports integer, boolean and string literals.
+Integer literals are sequences of decimal digits, but there is no support for literals of other bases.
+Leading zeros are not disallowed - they are simply stripped while lexing.
+
+Boolean literals are \texttt{true} and \texttt{false}.
+String literals are sequences of characters enclosed in double quotes.
+
+\section{Variables}
+
+Variables are used to store values, that can be used later in the program.
+They are declared by using the \texttt{:} operator and can be assigned a value using the \texttt{=} operator.
+
+\begin{lstlisting}
+    x: int;
+    x = 5;
+\end{lstlisting}
+
+A shorthand notation for the declaration and assignment of a variable is also supported:
+
+\begin{lstlisting}
+    x := 5;
+\end{lstlisting}
+
+In this case, the type of the variable is inferred from the type of the expression on the right-hand side of the assignment.
+
+\section{Types}
+
+NovaLang has a simple type system, which includes the following basic types:
+\begin{itemize}
+    \item \texttt{int} - a 32-bit signed integer
+    \item \texttt{bool} - a boolean value
+    \item \texttt{str} - a sequence of characters
+\end{itemize}
+
+There are additional types that are of special meaning:
+\begin{itemize}
+    \item \texttt{void} - is used to indicate that a function does not return a value.
+    \item \texttt{unknown} - is used to indicate that the type of a variable could not be inferred by the interpreter.
+\end{itemize}
+
+All special types except \texttt{void} are used internally by the interpreter and cannot be used in the source code.
+
+\subsection{Type compatibility}
+
+The interpreter performs type checking to ensure that the types of operands in an expression are compatible.
+Types of operands must be strictly equal, but type casts for string and integer types are available.
+
+\subsection{Arrays}
+
+The language supports arrays of any basic type.
+Arrays are declared by appending \texttt{[]} to the type of the array elements.
+The array literal lets you create an array with a list of elements.
+
+\begin{lstlisting}
+    x: int[];
+    x = [1, 2, 3];
+\end{lstlisting}
+
+The use of the shorthand notation is not supported in the case of an empty array, as the type of the array cannot be inferred when there are no elements defined.
+
+Single elements of an array can be accessed using the \texttt{[]} operator and are treated like normal variables, in the sense that they can be assigned a new value or used in expressions.
+
+Arrays are passed by value, so the underlying array is copied before it is assigned to another variable or passed to a function.
+
+\section{Blocks and scopes}
+
+\subsection{Blocks}
+A block is a sequence of statements or expressions declared within curly braces.
+Blocks can be nested, and each block introduces a new scope.
+
+\subsection{Scopes}
+A scope is a region of the program where a variable can be used.
+There are several types of scopes in NovaLang:
+\begin{itemize}
+    \item The \emph{global scope} is the outermost scope. This scope is implicitly created with the start of the program. Variables declared in the global scope are accessible from any part of the program.
+    \item A \emph{function scope} is the scope of a function. Symbols with identifiers already defined in the global scope can be redefined and result in the global symbol being shadowed.
+    \item A \emph{block scope} is the scope of a block. It is created by \texttt{if} statements, \texttt{for} loops and \texttt{when} expressions.
+    \item The \emph{local scope} is a special scope that is created for the pipe operator.
+\end{itemize}
+
+\section{Functions} \label{sec:functions}
+
+Functions are used to encapsulate a sequence of statements and can optionally return a value.
+Functions are declared using the \texttt{fn} keyword, followed by the name of the function, a list of parameters and the return type of the function.
+
+\begin{lstlisting}
+fn add(a: int, b: int): int {
+    a + b
+}
+\end{lstlisting}
+
+The last expression of a non-\texttt{void} function is considered to be the return value of the function.
+Parameters are passed by value.
+
+The language has also several built-in functions that are available to the user.
+Grouping of the functions is done via namespaces that correspond to a subset of types (\texttt{str}, \texttt{int}, \texttt{bool}).
+The notation for calling a built-in function is \texttt{namespace::function(arguments)}.
+
+\begin{lstlisting}
+str::split("Hello World", " ") // ["Hello", "World"]
+\end{lstlisting}
+
+Note that every array type acts as a dedicated namespace for corresponding functions for operations on arrays.
+
+\section{Control flow} \label{sec:control-flow}
+
+NovaLang supports the following control flow statements:
+\begin{itemize}
+    \item \texttt{if} - a conditional statement
+    \item \texttt{for} - a loop that iterates as long as a condition is true
+    \item \texttt{when} - the expression equivalent of a \texttt{if} statement
+\end{itemize}
+
+\subsection{If statements \& when expressions}
+
+An \texttt{if} statement is used to execute a block of code if a condition is true.
+
+\begin{lstlisting}
+if x > 5 {
+    print("x is greater than 5");
+} else {
+    print("x is less than or equal to 5");
+}
+\end{lstlisting}
+
+The semantics of the \texttt{when} expression are the same as the \texttt{if} statement, but the \texttt{when} expression is used to compute a value conditionally.
+
+\begin{lstlisting}
+result := when {
+    x > 5 {
+        "x is greater than 5"
+    },
+    default {
+        "x is less than or equal to 5"
+    };
+\end{lstlisting}
+
+Branches can omit their curly braces and preprend an arrow if they contain only a single expression.
+
+\begin{lstlisting}
+result := when {
+    x > 5 -> "x is greater than 5",
+    default -> "x is less than or equal to 5"
+};
+\end{lstlisting}
+
+\section{Expressions}
+
+Expressions are used to compute values.
+The type that is emitted by an expression can be used for further type inference while interpreting.
+
+\subsection{Arithmetic \& comparison expressions}
+
+The language supports the usual arithmetic operators: \texttt{+}, \texttt{-}, \texttt{*}, \texttt{/}, \texttt{mod}.
+The \texttt{+} operator is also used to concatenate strings.
+
+Comparison operators are also supported: \texttt{==}, \texttt{!=}, \texttt{<}, \texttt{>}, \texttt{<=}, \texttt{>=}.
+
+\subsection{Pipes}
+
+The pipe operator \texttt{|>} is used to chain expressions together.
+The result of the previous expression is made available through a \texttt{it} with its type being inferred from the previous expression.
+The last expression's value is the result of the whole pipe expression.
+
+\begin{lstlisting}
+"NovaLang is cool" 
+    |> str::upcase(it)
+    |> str::split(it)
+    |> str[]::print(it); // ["NOVALANG", "IS", "COOL"]
+\end{lstlisting}
+
+Even though the pipe operator will usually be used as a expression, they can also be used as a statement.
+In this case, the result of the last expression is discarded.
 \end{document}
