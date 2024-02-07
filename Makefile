@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-O2 -Wall --debug
+CFLAGS=-O3 -Wall --debug
 
 OBJ=novalang.tab.o lex.yy.o ast/symbol/symbol.o ast/ast.o
 
@@ -20,6 +20,6 @@ lex.yy.o: lex.yy.c novalang.tab.h
 
 test: novalang
 	sh tests.sh
-
+ 
 clean:
 	rm ast/ast.o ast/symbol/symbol.o lex.yy.* novalang.tab.* novalang
