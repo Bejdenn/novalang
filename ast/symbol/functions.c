@@ -40,6 +40,21 @@ void fn_table_init()
     s1->val = malloc(sizeof(union s_val));
 
     p[0] = s1;
+    fn_add("read", NS_STR | NS_ARRAY, T_STR | T_ARRAY, p, 1);
+
+    p = malloc(sizeof(struct symbol) * 1);
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_STR | T_ARRAY;
+
+    p[0] = s1;
+    fn_add("len", NS_STR | NS_ARRAY, T_INT, p, 1);
+
+    p = malloc(sizeof(struct symbol) * 1);
+    s1 = malloc(sizeof(struct symbol) * 1);
+    s1->type = T_STR;
+    s1->val = malloc(sizeof(union s_val));
+
+    p[0] = s1;
     fn_add("upcase", NS_STR, T_STR, p, 1);
 
     p = malloc(sizeof(struct symbol) * 1);

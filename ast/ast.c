@@ -172,6 +172,37 @@ union s_val *ast_eval(struct ast *a)
             printf("%s\n", ast_eval(call->args->r)->str);
             break;
         }
+        else if (strcmp(call->fn->name, "read") == 0 && call->fn->ns == (NS_STR | NS_ARRAY))
+        {
+            char line[128] = {0};
+            v->array = malloc(sizeof(struct array));
+            v->array->items = malloc(sizeof(union s_val));
+            int count = 0;
+
+            FILE *file = fopen(ast_eval(call->args->r)->str, "r");
+            if (file == NULL)
+            {
+                fprintf(stderr, "Failed to open file\n");
+                exit(1);
+            }
+
+            while (fgets(line, sizeof(line), file) != NULL)
+            {
+                v->array->items[count].str = strdup(line);
+                char *str = v->array->items[count].str;
+                str[strlen(str) - 1] = 0;
+
+                count++;
+                v->array->items = realloc(v->array->items, sizeof(union s_val) * (count + 1));
+            }
+            v->array->size = count;
+            break;
+        }
+        else if (strcmp(call->fn->name, "len") == 0 && call->fn->ns == (NS_STR | NS_ARRAY))
+        {
+            v->num = ast_eval(call->args->r)->array->size;
+            break;
+        }
         else if (strcmp(call->fn->name, "upcase") == 0 && call->fn->ns == NS_STR)
         {
             v->str = strdup(ast_eval(call->args->r)->str);

@@ -100,6 +100,10 @@ union s_val *cast(enum value_type dest, enum value_type src, union s_val *v)
     {
         u->str = to_string(src, v);
     }
+    else if (dest == T_INT && src == T_STR)
+    {
+        u->num = strtol(v->str, NULL, 10);
+    }
     else
     {
         printf("Cannot cast value of type '%s' to type '%s'\n", lookup_value_type_name(src), lookup_value_type_name(dest));
