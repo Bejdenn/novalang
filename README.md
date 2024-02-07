@@ -27,3 +27,13 @@ To run the program, use the following command:
 ```
 
 This will run the program and parse the input file. After the type check was successful, the program will be executed.
+
+## Tests
+
+The project contains several tests to ensure the correctness of the interpreter. To run the tests, use the following command:
+
+```bash
+make test
+```
+
+The test folder follows a specific structure to be able to just test for the successful execution of the program, a specific output or input. For more information on the structure, you can check out the [test script](tests.sh).
