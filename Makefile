@@ -1,12 +1,12 @@
 CC=gcc
 CFLAGS=-O2 -Wall --debug
 
-OBJ=novalang.tab.o lex.yy.o symbol.o ast.o
+OBJ=novalang.tab.o lex.yy.o ast/symbol/symbol.o ast/ast.o
 
 .PHONY=clean test
 
 novalang: $(OBJ)
-	$(CC) -o $@ $(OBJ)
+	$(CC) -o $@ $(OBJ) -Iast -Isymbol
 
 %.o: %.c %.h
 
@@ -22,4 +22,4 @@ test: novalang
 	sh tests.sh
 
 clean:
-	rm ast.o symbol.o lex.yy.* novalang.tab.* novalang
+	rm ast/ast.o ast/symbol/symbol.o lex.yy.* novalang.tab.* novalang

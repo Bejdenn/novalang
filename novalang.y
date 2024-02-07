@@ -2,7 +2,7 @@
     #include <stdio.h>
     #include <stdarg.h>
     #include <stdlib.h>
-    #include "ast.h"
+    #include "ast/ast.h"
 
     int yylex(void);
     extern int yylineno;

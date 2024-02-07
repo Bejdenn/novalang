@@ -1,4 +1,4 @@
-#include "symbol.h"
+#include "symbol/symbol.h"
 
 extern int yylineno;
 

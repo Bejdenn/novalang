@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "novalang.tab.h"
-#include "ast.h"
+#include "ast/ast.h"
 
 /*
 * TODOS:
