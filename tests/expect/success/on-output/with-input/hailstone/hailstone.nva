@@ -2,14 +2,17 @@ n := int::read();
 
 steps := 0;
 int::print(n);
-for n != 1 {
-    n = when {
-        (n mod 2) == 0 -> n / 2,
-        default        -> n * 3 + 1
-    };
-    int::print(n);
-    
-    steps = steps + 1; 
+if n > 0 {
+    for n != 1 {
+        n = when {
+            (n mod 2) == 0 -> n / 2,
+            default        -> n * 3 + 1
+        };
+        int::print(n);
+        
+        steps = steps + 1; 
+        str::print("steps: " + str(steps));
+    } 
+} else {
+    str::print("Input must be greater than 0");
 }
-
-str::print("steps: " + str(steps));
